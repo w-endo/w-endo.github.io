@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unity逆引き辞典</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">Unity<span>/</span>逆引き辞典</div>
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <input type="text" id="search" placeholder="やりたいことを入力… 例：弾を撃つ、ジャンプ、スコア">
+  </div>
+  <div class="count" id="count"></div>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="sidebar-section">
+      <div class="sidebar-label">カテゴリ</div>
+      <button class="filter-btn active" data-cat="all">
+        <span class="dot" style="background:#7a8499"></span> すべて
+      </button>
+      <button class="filter-btn" data-cat="action">
+        <span class="dot" style="background:var(--tag-act-b)"></span> アクション
+      </button>
+      <button class="filter-btn" data-cat="physics">
+        <span class="dot" style="background:var(--tag-phys-b)"></span> 物理・当たり判定
+      </button>
+      <button class="filter-btn" data-cat="ui">
+        <span class="dot" style="background:var(--tag-ui-b)"></span> UI
+      </button>
+      <button class="filter-btn" data-cat="input">
+        <span class="dot" style="background:#90caf9"></span> 入力操作
+      </button>
+      <button class="filter-btn" data-cat="enemy">
+        <span class="dot" style="background:#ef9a9a"></span> 敵・AI
+      </button>
+      <button class="filter-btn" data-cat="audio">
+        <span class="dot" style="background:#ce93d8"></span> 音・エフェクト
+      </button>
+      <button class="filter-btn" data-cat="scene">
+        <span class="dot" style="background:var(--tag-scene-b)"></span> シーン管理
+      </button>
+      <button class="filter-btn" data-cat="data">
+        <span class="dot" style="background:#a5d6a7"></span> データ保存
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">ジャンル別</div>
+      <button class="genre-btn" data-genre="2daction">2Dアクション</button>
+      <button class="genre-btn" data-genre="shooting">シューティング</button>
+      <button class="genre-btn" data-genre="puzzle">パズル</button>
+      <button class="genre-btn" data-genre="runner">ランゲーム</button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">難易度</div>
+      <button class="filter-btn" data-diff="1">
+        <span class="dot" style="background:var(--accent2)"></span> ★☆☆ 基本
+      </button>
+      <button class="filter-btn" data-diff="2">
+        <span class="dot" style="background:var(--warn)"></span> ★★☆ 応用
+      </button>
+      <button class="filter-btn" data-diff="3">
+        <span class="dot" style="background:#ef9a9a"></span> ★★★ 発展
+      </button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="active-filters" id="activeFilters"></div>
+    <div class="cards" id="cards"></div>
+    <div class="no-result" id="noResult" style="display:none">
+      <div class="no-result-icon">🔍</div>
+      <div>該当する項目が見つかりませんでした</div>
+    </div>
+  </main>
+</div>
+
+<!-- モーダル -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- データを先に読み込み、その後ロジックを読み込む -->
+<script src="data/entries.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
