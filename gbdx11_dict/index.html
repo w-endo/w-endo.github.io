@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameBaseDX11 逆引きリファレンス</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface2:  #1f2937;
+    --border:    #30363d;
+    --accent:    #58a6ff;
+    --accent2:   #3fb950;
+    --accent3:   #d2a8ff;
+    --accent4:   #ffa657;
+    --accent5:   #ff7b72;
+    --text:      #c9d1d9;
+    --text-dim:  #8b949e;
+    --text-head: #f0f6fc;
+    --tag-bg:    #21262d;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .logo span { color: var(--text-dim); font-weight: 400; }
+  #search {
+    flex: 1;
+    max-width: 560px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  #search:focus { border-color: var(--accent); }
+  #search::placeholder { color: var(--text-dim); }
+
+  /* ── Layout ── */
+  .layout { display: flex; min-height: calc(100vh - 65px); }
+
+  /* ── Sidebar ── */
+  aside {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: sticky;
+    top: 65px;
+    height: calc(100vh - 65px);
+    overflow-y: auto;
+  }
+  .sidebar-section { margin-bottom: 24px; }
+  .sidebar-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 0 20px 8px;
+  }
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 20px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .sidebar-link:hover, .sidebar-link.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .sidebar-link.active { color: var(--accent); }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Main ── */
+  main {
+    flex: 1;
+    padding: 32px 40px;
+    overflow-y: auto;
+    max-width: 960px;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    margin-bottom: 40px;
+    padding: 32px;
+    background: linear-gradient(135deg, #161b22 0%, #0d1117 60%);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at top right, rgba(88,166,255,.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-head);
+    margin-bottom: 8px;
+  }
+  .hero p { color: var(--text-dim); max-width: 560px; }
+
+  /* ── Section heading ── */
+  .section-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-dim);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 8px 0 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::before {
+    content: '//';
+    color: var(--border);
+    font-size: 15px;
+  }
+
+  /* ── Card grid ── */
+  .cards { display: flex; flex-direction: column; gap: 12px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--accent); }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-icon {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #fff;
+    padding: 3px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .card-meta { flex: 1; }
+  .card-q {
+    font-weight: 700;
+    color: var(--text-head);
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag {
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-dim);
+  }
+  .chevron {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-top: 4px;
+    transition: transform .2s;
+    flex-shrink: 0;
+  }
+  .card.open .chevron { transform: rotate(90deg); }
+
+  .card-body {
+    display: none;
+    padding: 0 20px 20px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .card.open .card-body { display: block; }
+
+  .card-body p { color: var(--text); margin: 12px 0 10px; }
+
+  pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .kw { color: var(--accent3); }
+  .fn { color: var(--accent); }
+  .ns { color: var(--accent4); }
+  .cm { color: var(--text-dim); }
+  .str { color: var(--accent2); }
+  .num { color: var(--accent4); }
+  .tp { color: var(--accent5); }
+
+  .note {
+    background: rgba(88,166,255,.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .warn {
+    background: rgba(255,166,87,.08);
+    border-left: 3px solid var(--accent4);
+    border-radius: 0 4px 4px 0;
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  /* ── Recipe cards ── */
+  .recipe-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  .recipe-badge.action  { background: rgba(249,115,22,.15); color:#f97316; border:1px solid rgba(249,115,22,.3); }
+  .recipe-badge.stg     { background: rgba(168,85,247,.15); color:#a855f7; border:1px solid rgba(168,85,247,.3); }
+  .recipe-badge.puzzle  { background: rgba(6,182,212,.15);  color:#06b6d4; border:1px solid rgba(6,182,212,.3);  }
+
+  .recipe-step {
+    display: flex;
+    gap: 10px;
+    margin: 6px 0;
+    align-items: flex-start;
+  }
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .step-body p { margin: 0 0 6px; }
+
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin: 10px 0;
+  }
+  .flow-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+  }
+  .flow-arrow { color: var(--text-dim); font-size: 14px; }
+
+  .card.hidden { display: none; }
+
+  /* ── category sections ── */
+  .cat-section { margin-bottom: 48px; }
+  .cat-section.hidden { display: none; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">GameBaseDX11 <span>// 逆引きリファレンス</span></div>
+  <input id="search" type="text" placeholder="やりたいことを入力 …（例: 画像を表示, キー入力）">
+</header>
+
+<div class="layout">
+<aside>
+  <div class="sidebar-section">
+    <div class="sidebar-title">カテゴリ</div>
+    <button class="sidebar-link active" data-cat="all" onclick="filterCat(this,'all')">
+      <span class="dot" style="background:#8b949e"></span>すべて
+    </button>
+    <button class="sidebar-link" data-cat="input" onclick="filterCat(this,'input')">
+      <span class="dot" style="background:#58a6ff"></span>入力
+    </button>
+    <button class="sidebar-link" data-cat="image" onclick="filterCat(this,'image')">
+      <span class="dot" style="background:#3fb950"></span>2D描画
+    </button>
+    <button class="sidebar-link" data-cat="model" onclick="filterCat(this,'model')">
+      <span class="dot" style="background:#ffa657"></span>3Dモデル
+    </button>
+    <button class="sidebar-link" data-cat="audio" onclick="filterCat(this,'audio')">
+      <span class="dot" style="background:#d2a8ff"></span>オーディオ
+    </button>
+    <button class="sidebar-link" data-cat="gameobject" onclick="filterCat(this,'gameobject')">
+      <span class="dot" style="background:#ff7b72"></span>ゲームオブジェクト
+    </button>
+    <button class="sidebar-link" data-cat="collision" onclick="filterCat(this,'collision')">
+      <span class="dot" style="background:#79c0ff"></span>当たり判定
+    </button>
+    <button class="sidebar-link" data-cat="scene" onclick="filterCat(this,'scene')">
+      <span class="dot" style="background:#56d364"></span>シーン管理
+    </button>
+    <button class="sidebar-link" data-cat="camera" onclick="filterCat(this,'camera')">
+      <span class="dot" style="background:#e3b341"></span>カメラ
+    </button>
+    <button class="sidebar-link" data-cat="vfx" onclick="filterCat(this,'vfx')">
+      <span class="dot" style="background:#bc8cff"></span>VFX / パーティクル
+    </button>
+    <button class="sidebar-link" data-cat="debug" onclick="filterCat(this,'debug')">
+      <span class="dot" style="background:#8b949e"></span>デバッグ / CSV
+    </button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-title">🎮 ゲームレシピ</div>
+    <button class="sidebar-link" data-cat="recipe-3daction" onclick="filterCat(this,'recipe-3daction')">
+      <span class="dot" style="background:#f97316"></span>3Dアクション
+    </button>
+    <button class="sidebar-link" data-cat="recipe-stg" onclick="filterCat(this,'recipe-stg')">
+      <span class="dot" style="background:#a855f7"></span>シューティング
+    </button>
+    <button class="sidebar-link" data-cat="recipe-puzzle" onclick="filterCat(this,'recipe-puzzle')">
+      <span class="dot" style="background:#06b6d4"></span>パズル・ステージクリア
+    </button>
+  </div>
+</aside>
+
+<main id="main">
+
+  <div class="hero">
+    <h1>やりたいことから引ける、DirectX11 ゲームライブラリ逆引き辞典</h1>
+    <p>左のカテゴリか上の検索ボックスで絞り込めます。各カードをクリックするとコード例と解説が表示されます。</p>
+  </div>
+
+  <!-- ===== INPUT ===== -->
+  <div class="cat-section" id="cat-input">
+    <div class="section-title">入力 (Input)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="input" data-kw="キーボード キー 押した 判定 IsKey">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#1f6feb">INPUT</span>
+          <div class="card-meta">
+            <div class="card-q">キーが押されているか調べたい</div>
+            <div class="card-tags"><span class="tag">Input::IsKey</span><span class="tag">キーボード</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>押し続けている間 <code>true</code> を返します。キーコードは Windows の仮想キーコード（<code>VK_*</code> マクロまたは文字リテラル）を使います。</p>
+<pre><code><kw>if</kw> (<ns>Input</ns>::<fn>IsKey</fn>(<str>'W'</str>)) {
+    <cm>// W キーを押し続けている間、毎フレーム実行</cm>
+    <ns>transform_</ns>.position_.<ns>z</ns> += <num>0.1f</num>;
+}</code></pre>
+          <div class="note">毎フレーム呼ばれるので、「押した瞬間」だけ処理したい場合は <code>IsKeyDown</code> を使ってください。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="input" data-kw="キー 押した瞬間 トリガー IsKeyDown">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#1f6feb">INPUT</span>
+          <div class="card-meta">
+            <div class="card-q">キーを押した瞬間だけ処理したい</div>
+            <div class="card-tags"><span class="tag">Input::IsKeyDown</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>押した最初のフレームだけ <code>true</code> になります。ジャンプ・攻撃など「一度だけ」の動作に使います。</p>
+<pre><code><kw>if</kw> (<ns>Input</ns>::<fn>IsKeyDown</fn>(VK_SPACE)) {
+    <cm>// スペースを押した瞬間だけジャンプ</cm>
+    Jump();
+}</code></pre>
+          <div class="note">離した瞬間を取りたい場合は <code>IsKeyUp</code> を使います。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="input" data-kw="マウス クリック ボタン 位置 移動量">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#1f6feb">INPUT</span>
+          <div class="card-meta">
+            <div class="card-q">マウスの位置・クリックを取得したい</div>
+            <div class="card-tags"><span class="tag">Input::GetMousePosition</span><span class="tag">Input::IsMouseButton</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>マウス座標は <code>XMFLOAT3</code> で返ります（x, y のみ使用）。ボタンコードは <code>0</code>=左ボタン、<code>1</code>=右ボタン です。</p>
+<pre><code>XMFLOAT3 mousePos = <ns>Input</ns>::<fn>GetMousePosition</fn>();
+<cm>// x=横, y=縦（ウィンドウ左上が原点）</cm>
+
+<kw>if</kw> (<ns>Input</ns>::<fn>IsMouseButtonDown</fn>(<num>0</num>)) {
+    <cm>// 左クリックした瞬間</cm>
+    Shoot(mousePos.x, mousePos.y);
+}
+
+XMFLOAT3 delta = <ns>Input</ns>::<fn>GetMouseMove</fn>();
+<cm>// 前フレームからの移動量 (dx, dy)</cm></code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="input" data-kw="ゲームパッド コントローラ スティック トリガー IsPadButton">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#1f6feb">INPUT</span>
+          <div class="card-meta">
+            <div class="card-q">ゲームパッド（コントローラ）の入力を取得したい</div>
+            <div class="card-tags"><span class="tag">Input::IsPadButton</span><span class="tag">GetPadStickL/R</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>XInput 対応コントローラに対応しています。<code>padID</code> を省略すると 0 番（1P）です。</p>
+<pre><code><cm>// ボタン押下チェック（XINPUT_GAMEPAD_* 定数を使う）</cm>
+<kw>if</kw> (<ns>Input</ns>::<fn>IsPadButtonDown</fn>(XINPUT_GAMEPAD_A)) {
+    Jump();
+}
+
+<cm>// 左スティック（-1.0〜1.0 に正規化済み）</cm>
+XMFLOAT3 stick = <ns>Input</ns>::<fn>GetPadStickL</fn>();
+transform_.position_.x += stick.x * <num>0.1f</num>;
+
+<cm>// 右トリガー (0.0〜1.0)</cm>
+<kw>float</kw> trigger = <ns>Input</ns>::<fn>GetPadTrrigerR</fn>();
+
+<cm>// 振動 (左モーター強度, 右モーター強度, padID)</cm>
+<ns>Input</ns>::<fn>SetPadVibration</fn>(<num>32767</num>, <num>32767</num>);</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== IMAGE 2D ===== -->
+  <div class="cat-section" id="cat-image">
+    <div class="section-title">2D描画 (Image / Text)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="image" data-kw="画像 表示 2D スプライト Image Load Draw">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#238636">IMAGE</span>
+          <div class="card-meta">
+            <div class="card-q">画像（スプライト）を画面に表示したい</div>
+            <div class="card-tags"><span class="tag">Image::Load</span><span class="tag">Image::Draw</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>ハンドル方式で画像を管理します。初期化時に <code>Load</code>、毎フレーム <code>Draw</code> を呼びます。</p>
+<pre><code><cm>// 初期化</cm>
+<kw>int</kw> hImage_ = <num>-1</num>;
+
+<kw>void</kw> <fn>Initialize</fn>() {
+    hImage_ = <ns>Image</ns>::<fn>Load</fn>(<str>"Assets/char.png"</str>);
+    <cm>// Transform で位置・回転・スケールを設定</cm>
+    Transform t;
+    t.position_ = XMFLOAT3(<num>100</num>, <num>100</num>, <num>0</num>);
+    t.scale_     = XMFLOAT3(<num>1</num>, <num>1</num>, <num>1</num>);
+    <ns>Image</ns>::<fn>SetTransform</fn>(hImage_, t);
+}
+
+<kw>void</kw> <fn>Draw</fn>() {
+    <ns>Image</ns>::<fn>Draw</fn>(hImage_);
+}
+
+<kw>void</kw> <fn>Release</fn>() {
+    <ns>Image</ns>::<fn>Release</fn>(hImage_);
+}</code></pre>
+          <div class="note"><code>Image::Initialize()</code> は Main.cpp 内で自動的に呼ばれるため、GameObject のコンストラクタで呼ぶ必要はありません。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="image" data-kw="切り抜き スプライトシート アニメーション SetRect UV">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#238636">IMAGE</span>
+          <div class="card-meta">
+            <div class="card-q">テクスチャの一部だけ切り抜いて表示したい（スプライトシート）</div>
+            <div class="card-tags"><span class="tag">Image::SetRect</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>UV 範囲を <code>SetRect(handle, x, y, width, height)</code> で指定します。ピクセル座標です。</p>
+<pre><code><cm>// 128x128 のコマが横に並んだシートの 2 枚目を表示</cm>
+<ns>Image</ns>::<fn>SetRect</fn>(hImage_, <num>128</num>, <num>0</num>, <num>128</num>, <num>128</num>);
+
+<cm>// 元に戻す場合</cm>
+<ns>Image</ns>::<fn>ResetRect</fn>(hImage_);
+
+<cm>// アニメーション例（frame は Update でカウントアップ）</cm>
+<kw>int</kw> col = frame % <num>4</num>;
+<ns>Image</ns>::<fn>SetRect</fn>(hImage_, col * <num>64</num>, <num>0</num>, <num>64</num>, <num>64</num>);</code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="image" data-kw="透明度 アルファ フェード SetAlpha">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#238636">IMAGE</span>
+          <div class="card-meta">
+            <div class="card-q">画像の透明度を変えたい（フェードイン/アウト）</div>
+            <div class="card-tags"><span class="tag">Image::SetAlpha</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p><code>SetAlpha</code> の引数は <strong>0〜255</strong> です（0=透明、255=不透明）。</p>
+<pre><code><cm>// フェードアウト例</cm>
+alpha_ -= <num>3</num>;
+<kw>if</kw> (alpha_ < <num>0</num>) alpha_ = <num>0</num>;
+<ns>Image</ns>::<fn>SetAlpha</fn>(hImage_, alpha_);
+<ns>Image</ns>::<fn>Draw</fn>(hImage_);</code></pre>
+          <div class="note">引数は 0〜255 の整数ですが、内部では 0.0〜1.0 に変換されます。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="image" data-kw="テキスト 文字 数字 表示 フォント Text Draw">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#238636">TEXT</span>
+          <div class="card-meta">
+            <div class="card-q">スコアや文字列を画面に表示したい</div>
+            <div class="card-tags"><span class="tag">Text::Initialize</span><span class="tag">Text::Draw</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>文字画像（横並びのビットマップフォント）を使ってテキストを描画します。</p>
+<pre><code><cm>// メンバ変数</cm>
+Text text_;
+
+<kw>void</kw> <fn>Initialize</fn>() {
+    <cm>// フォント画像, 1文字の幅, 高さ, 1行の文字数</cm>
+    text_.<fn>Initialize</fn>(<str>"Assets/font.png"</str>, <num>16</num>, <num>16</num>, <num>16</num>);
+}
+
+<kw>void</kw> <fn>Draw</fn>() {
+    text_.<fn>Draw</fn>(<num>10</num>, <num>10</num>, <str>"SCORE:"</str>);   <cm>// 文字列</cm>
+    text_.<fn>Draw</fn>(<num>80</num>, <num>10</num>, score_);    <cm>// int 値も直接渡せる</cm>
+}
+
+<kw>void</kw> <fn>Release</fn>() {
+    text_.<fn>Release</fn>();
+}</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== MODEL 3D ===== -->
+  <div class="cat-section" id="cat-model">
+    <div class="section-title">3Dモデル (Model / FBX)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="model" data-kw="3D モデル FBX ロード 表示 Model Load Draw">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#b45309">MODEL</span>
+          <div class="card-meta">
+            <div class="card-q">3D モデル（FBX）を読み込んで表示したい</div>
+            <div class="card-tags"><span class="tag">Model::Load</span><span class="tag">Model::Draw</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>Image と同様にハンドル方式。<code>SetTransform</code> でワールド変換行列を渡してから <code>Draw</code> します。</p>
+<pre><code><kw>int</kw> hModel_ = <num>-1</num>;
+
+<kw>void</kw> <fn>Initialize</fn>() {
+    hModel_ = <ns>Model</ns>::<fn>Load</fn>(<str>"Assets/player.fbx"</str>);
+}
+
+<kw>void</kw> <fn>Draw</fn>() {
+    <cm>// Transform を計算</cm>
+    transform_.<fn>Calclation</fn>();
+    <ns>Model</ns>::<fn>SetTransform</fn>(hModel_, transform_);
+    <ns>Model</ns>::<fn>Draw</fn>(hModel_);
+}
+
+<kw>void</kw> <fn>Release</fn>() {
+    <ns>Model</ns>::<fn>Release</fn>(hModel_);
+}</code></pre>
+          <div class="note">モデルは必ず <code>transform_.Calclation()</code> を呼んでから描画してください。ワールド行列が更新されます。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="model" data-kw="アニメーション フレーム SetAnimFrame 再生">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#b45309">MODEL</span>
+          <div class="card-meta">
+            <div class="card-q">3D モデルのアニメーションを再生したい</div>
+            <div class="card-tags"><span class="tag">Model::SetAnimFrame</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>開始フレーム・終了フレーム・再生速度を設定します。ループは自動です。</p>
+<pre><code><kw>void</kw> <fn>Initialize</fn>() {
+    hModel_ = <ns>Model</ns>::<fn>Load</fn>(<str>"Assets/player.fbx"</str>);
+    <cm>// 歩きアニメ: フレーム 0〜30、速度 1.0f</cm>
+    <ns>Model</ns>::<fn>SetAnimFrame</fn>(hModel_, <num>0</num>, <num>30</num>, <num>1.0f</num>);
+}
+
+<cm>// 攻撃モーションに切り替える例</cm>
+<kw>void</kw> <fn>StartAttack</fn>() {
+    <ns>Model</ns>::<fn>SetAnimFrame</fn>(hModel_, <num>31</num>, <num>60</num>, <num>1.5f</num>);
+}
+
+<cm>// 現在の再生フレームを取得</cm>
+<kw>int</kw> now = <ns>Model</ns>::<fn>GetAnimFrame</fn>(hModel_);</code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="model" data-kw="ボーン ポジション 位置 GetBonePosition 剣 武器">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#b45309">MODEL</span>
+          <div class="card-meta">
+            <div class="card-q">特定ボーンのワールド座標を取得したい（武器の位置など）</div>
+            <div class="card-tags"><span class="tag">Model::GetBonePosition</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code>XMFLOAT3 handPos = <ns>Model</ns>::<fn>GetBonePosition</fn>(hModel_, <str>"RightHand"</str>);
+<cm>// 剣オブジェクトの位置をボーンに追従させる</cm>
+sword_->SetPosition(handPos);</code></pre>
+          <div class="note">ボーン名は FBX ファイル内に定義された名前と完全一致が必要です。Maya/Blender 側のボーン名をご確認ください。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="model" data-kw="レイキャスト 地面 高さ マウス クリック RayCast">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#b45309">MODEL</span>
+          <div class="card-meta">
+            <div class="card-q">レイキャストでモデルと交差判定したい（地面の高さ取得など）</div>
+            <div class="card-tags"><span class="tag">Model::RayCast</span><span class="tag">RayCastData</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code>RayCastData data;
+data.start = XMFLOAT3(<num>0</num>, <num>100</num>, <num>0</num>);   <cm>// レイの始点</cm>
+data.dir   = XMFLOAT3(<num>0</num>, <num>-1</num>, <num>0</num>);   <cm>// 真下に向けて発射</cm>
+
+<ns>Model</ns>::<fn>RayCast</fn>(hGround_, &data);
+
+<kw>if</kw> (data.hit) {
+    <cm>// 交差した → data.dist に始点からの距離</cm>
+    <kw>float</kw> groundY = data.start.y - data.dist;
+    SetPosition(<num>0</num>, groundY, <num>0</num>);
+}</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== AUDIO ===== -->
+  <div class="cat-section" id="cat-audio">
+    <div class="section-title">オーディオ (Audio)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="audio" data-kw="音 SE BGM 再生 ロード Audio Load Play">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#6e40c9">AUDIO</span>
+          <div class="card-meta">
+            <div class="card-q">音声（SE・BGM）を再生したい</div>
+            <div class="card-tags"><span class="tag">Audio::Load</span><span class="tag">Audio::Play</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>WAV ファイルのみ対応。<code>isLoop=true</code> で BGM のループ再生ができます。</p>
+<pre><code><kw>int</kw> hBGM_ = <num>-1</num>;
+<kw>int</kw> hSE_  = <num>-1</num>;
+
+<kw>void</kw> <fn>Initialize</fn>() {
+    <cm>// BGM：ループあり</cm>
+    hBGM_ = <ns>Audio</ns>::<fn>Load</fn>(<str>"Assets/bgm.wav"</str>, <kw>true</kw>);
+    <cm>// SE：ループなし（デフォルト）</cm>
+    hSE_  = <ns>Audio</ns>::<fn>Load</fn>(<str>"Assets/jump.wav"</str>);
+
+    <ns>Audio</ns>::<fn>Play</fn>(hBGM_);  <cm>// BGM 再生開始</cm>
+}
+
+<kw>void</kw> <fn>Update</fn>() {
+    <kw>if</kw> (<ns>Input</ns>::<fn>IsKeyDown</fn>(VK_SPACE)) {
+        <ns>Audio</ns>::<fn>Play</fn>(hSE_);   <cm>// SE 再生</cm>
+    }
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="audio" data-kw="音 停止 ストップ Audio Stop">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#6e40c9">AUDIO</span>
+          <div class="card-meta">
+            <div class="card-q">音を止めたい</div>
+            <div class="card-tags"><span class="tag">Audio::Stop</span><span class="tag">Audio::AllRelease</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><ns>Audio</ns>::<fn>Stop</fn>(hBGM_);      <cm>// 指定した音を停止</cm>
+<ns>Audio</ns>::<fn>AllRelease</fn>();     <cm>// すべての音声リソースを解放</cm></code></pre>
+          <div class="note">シーン遷移時は <code>AllRelease()</code> で全サウンドをまとめて解放するのが安全です。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== GAMEOBJECT ===== -->
+  <div class="cat-section" id="cat-gameobject">
+    <div class="section-title">ゲームオブジェクト (GameObject)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="gameobject" data-kw="オブジェクト 生成 Instantiate 子 親 追加">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#cf222e">OBJCT</span>
+          <div class="card-meta">
+            <div class="card-q">ゲームオブジェクトを動的に生成したい</div>
+            <div class="card-tags"><span class="tag">Instantiate&lt;T&gt;</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p><code>Instantiate&lt;T&gt;(parent)</code> は new + Initialize + 親への登録を一括でやってくれます。</p>
+<pre><code><cm>// 弾を生成（this が親オブジェクト）</cm>
+Bullet* pBullet = <fn>Instantiate</fn>&lt;Bullet&gt;(<kw>this</kw>);
+pBullet->SetPosition(GetPosition());
+
+<cm>// 別のオブジェクトを親にする</cm>
+Enemy* pEnemy = <fn>Instantiate</fn>&lt;Enemy&gt;(pSceneRoot);</code></pre>
+          <div class="note">生成されたオブジェクトの <code>Initialize()</code> は自動で呼ばれます。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="gameobject" data-kw="削除 消す KillMe 死亡 フラグ">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#cf222e">OBJCT</span>
+          <div class="card-meta">
+            <div class="card-q">自分自身（または子）を削除したい</div>
+            <div class="card-tags"><span class="tag">KillMe()</span><span class="tag">KillAllChildren()</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// 自分を削除フラグON（次フレームで自動削除）</cm>
+KillMe();
+
+<cm>// 全子オブジェクトを削除</cm>
+KillAllChildren();
+
+<cm>// 死亡フラグを確認する場合（Update 内など）</cm>
+<kw>if</kw> (IsDead()) { ... }</code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="gameobject" data-kw="位置 回転 スケール Transform SetPosition SetRotate SetScale">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#cf222e">OBJCT</span>
+          <div class="card-meta">
+            <div class="card-q">位置・回転・スケールを設定・取得したい</div>
+            <div class="card-tags"><span class="tag">SetPosition</span><span class="tag">SetRotate</span><span class="tag">SetScale</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// 位置セット</cm>
+SetPosition(<num>10.0f</num>, <num>0.0f</num>, <num>5.0f</num>);
+SetPosition(XMFLOAT3(<num>10</num>, <num>0</num>, <num>5</num>));
+
+<cm>// 取得（ローカル座標）</cm>
+XMFLOAT3 pos = GetPosition();
+
+<cm>// Y 軸のみ回転（ラジアン）</cm>
+SetRotateY(XMConvertToRadians(<num>90.0f</num>));
+
+<cm>// ワールド座標取得（親の座標込み）</cm>
+XMFLOAT3 world = GetWorldPosition();</code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="gameobject" data-kw="表示 非表示 Visible Invisible 描画 切り替え">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#cf222e">OBJCT</span>
+          <div class="card-meta">
+            <div class="card-q">オブジェクトを一時的に非表示にしたい</div>
+            <div class="card-tags"><span class="tag">Visible()</span><span class="tag">Invisible()</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p><code>Invisible()</code> を呼ぶと <code>Draw()</code> が呼ばれなくなります。<code>Update()</code> は継続して動きます。</p>
+<pre><code><cm>// ダメージ点滅の例</cm>
+damageTimer_--;
+<kw>if</kw> (damageTimer_ % <num>4</num> == <num>0</num>)
+    Invisible();
+<kw>else</kw>
+    Visible();
+
+<cm>// Update を止めたい場合</cm>
+Leave();   <cm>// Update停止</cm>
+Enter();   <cm>// Update再開</cm></code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="gameobject" data-kw="名前 FindObject 検索 取得 子オブジェクト">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#cf222e">OBJCT</span>
+          <div class="card-meta">
+            <div class="card-q">名前でオブジェクトを検索したい</div>
+            <div class="card-tags"><span class="tag">FindObject</span><span class="tag">FindChildObject</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// ルートから全体検索（最も汎用的）</cm>
+GameObject* pPlayer = <fn>FindObject</fn>(<str>"Player"</str>);
+
+<cm>// 直下の子だけ検索（高速）</cm>
+GameObject* pUI = <fn>FindChildObject</fn>(<str>"ScoreUI"</str>);
+
+<cm>// nullptr チェックをしてから使う</cm>
+<kw>if</kw> (pPlayer != <kw>nullptr</kw>) {
+    XMFLOAT3 pos = pPlayer->GetPosition();
+}</code></pre>
+          <div class="note">オブジェクト名はコンストラクタ <code>GameObject(parent, "Name")</code> で指定します。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== COLLISION ===== -->
+  <div class="cat-section" id="cat-collision">
+    <div class="section-title">当たり判定 (Collider)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="collision" data-kw="当たり判定 コライダー BoxCollider 追加 矩形">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#0e7490">COLLD</span>
+          <div class="card-meta">
+            <div class="card-q">ボックス（矩形）の当たり判定を追加したい</div>
+            <div class="card-tags"><span class="tag">AddCollider</span><span class="tag">BoxCollider</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p><code>Initialize()</code> 内でコライダーを追加します。第1引数がオフセット、第2引数がサイズです。</p>
+<pre><code><kw>void</kw> <fn>Initialize</fn>() {
+    <cm>// 中心オフセット (0,0,0)、サイズ (1,2,1) のボックスコライダー</cm>
+    AddCollider(<kw>new</kw> <tp>BoxCollider</tp>(
+        XMFLOAT3(<num>0</num>, <num>0</num>, <num>0</num>),  <cm>// ベース位置オフセット</cm>
+        XMFLOAT3(<num>1</num>, <num>2</num>, <num>1</num>)   <cm>// サイズ</cm>
+    ));
+}
+
+<cm>// 衝突イベント（相手の GameObject* が渡される）</cm>
+<kw>void</kw> <fn>OnCollision</fn>(GameObject* pTarget) <kw>override</kw> {
+    <kw>if</kw> (pTarget->GetObjectName() == <str>"Enemy"</str>) {
+        KillMe();
+    }
+}</code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="collision" data-kw="球 円 SphereCollider スフィア">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#0e7490">COLLD</span>
+          <div class="card-meta">
+            <div class="card-q">球（スフィア）の当たり判定を追加したい</div>
+            <div class="card-tags"><span class="tag">SphereCollider</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code>AddCollider(<kw>new</kw> <tp>SphereCollider</tp>(
+    XMFLOAT3(<num>0</num>, <num>0</num>, <num>0</num>),  <cm>// ベース位置オフセット</cm>
+    XMFLOAT3(<num>1</num>, <num>0</num>, <num>0</num>)   <cm>// x 成分が半径</cm>
+));</code></pre>
+          <div class="note">SphereCollider のサイズ引数は x 成分のみが半径として使われます。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="collision" data-kw="コライダー 可視化 デバッグ表示 isDrawCollision">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#0e7490">COLLD</span>
+          <div class="card-meta">
+            <div class="card-q">当たり判定の形をデバッグ表示したい</div>
+            <div class="card-tags"><span class="tag">Direct3D::isDrawCollision_</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// どこかで true に設定するだけで全コライダーが可視化される</cm>
+<ns>Direct3D</ns>::isDrawCollision_ = <kw>true</kw>;
+
+<cm>// デバッグキーで切り替える例</cm>
+<kw>if</kw> (<ns>Input</ns>::<fn>IsKeyDown</fn>(<str>'C'</str>)) {
+    <ns>Direct3D</ns>::isDrawCollision_ = !<ns>Direct3D</ns>::isDrawCollision_;
+}</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SCENE ===== -->
+  <div class="cat-section" id="cat-scene">
+    <div class="section-title">シーン管理 (SceneManager)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="scene" data-kw="シーン 遷移 切り替え ChangeScene SCENE_ID">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#16a34a">SCENE</span>
+          <div class="card-meta">
+            <div class="card-q">シーンを切り替えたい</div>
+            <div class="card-tags"><span class="tag">SceneManager::ChangeScene</span><span class="tag">SCENE_ID</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>まず <code>SceneManager.h</code> の <code>SCENE_ID</code> 列挙体に新シーンを追加し、<code>SceneManager.cpp</code> で対応クラスを <code>Instantiate</code> します。</p>
+<pre><code><cm>// SceneManager.h の列挙体に追加</cm>
+<kw>enum</kw> SCENE_ID {
+    SCENE_ID_TEST = <num>0</num>,
+    SCENE_ID_TITLE,
+    SCENE_ID_GAME,
+    SCENE_ID_RESULT,
+};
+
+<cm>// シーン内のどこからでも遷移できる</cm>
+<cm>// （SceneManager のポインタを取得して呼ぶ）</cm>
+GameObject* pSM = <fn>FindObject</fn>(<str>"SceneManager"</str>);
+<kw>static_cast</kw>&lt;SceneManager*&gt;(pSM)->ChangeScene(SCENE_ID_GAME);</code></pre>
+          <div class="warn">ChangeScene を呼んだ瞬間ではなく、次の Update サイクルで遷移します。遷移後に古いポインタを使わないよう注意してください。</div>
+        </div>
+      </div>
+
+      <div class="card" data-cat="scene" data-kw="シーン 新規作成 追加 GameObject 継承">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#16a34a">SCENE</span>
+          <div class="card-meta">
+            <div class="card-q">新しいシーンクラスを作りたい</div>
+            <div class="card-tags"><span class="tag">GameObject 継承</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>GameObject を継承して4つの仮想関数を実装するだけです。</p>
+<pre><code><cm>// GameScene.h</cm>
+<kw>class</kw> <tp>GameScene</tp> : <kw>public</kw> <tp>GameObject</tp> {
+<kw>public</kw>:
+    <fn>GameScene</fn>(<tp>GameObject</tp>* parent)
+        : <fn>GameObject</fn>(parent, <str>"GameScene"</str>) {}
+
+    <kw>void</kw> <fn>Initialize</fn>() <kw>override</kw>;
+    <kw>void</kw> <fn>Update</fn>()     <kw>override</kw>;
+    <kw>void</kw> <fn>Draw</fn>()      <kw>override</kw>;
+    <kw>void</kw> <fn>Release</fn>()   <kw>override</kw>;
+};</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== CAMERA ===== -->
+  <div class="cat-section" id="cat-camera">
+    <div class="section-title">カメラ (Camera)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="camera" data-kw="カメラ 位置 注視点 SetPosition SetTarget">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#b45309">CAMRA</span>
+          <div class="card-meta">
+            <div class="card-q">カメラの位置と注視点を設定したい</div>
+            <div class="card-tags"><span class="tag">Camera::SetPosition</span><span class="tag">Camera::SetTarget</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// プレイヤーを追いかけるカメラの例（Update 内）</cm>
+XMFLOAT3 playerPos = GetPosition();
+
+<cm>// カメラ位置 = プレイヤーの少し後ろ・上</cm>
+<ns>Camera</ns>::<fn>SetPosition</fn>(XMFLOAT3(
+    playerPos.x,
+    playerPos.y + <num>5.0f</num>,
+    playerPos.z - <num>10.0f</num>
+));
+
+<cm>// 注視点 = プレイヤー</cm>
+<ns>Camera</ns>::<fn>SetTarget</fn>(playerPos);</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== VFX ===== -->
+  <div class="cat-section" id="cat-vfx">
+    <div class="section-title">VFX / パーティクル (VFX)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="vfx" data-kw="パーティクル エフェクト VFX 爆発 炎 Start EmitterData">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#7e22ce">VFX</span>
+          <div class="card-meta">
+            <div class="card-q">パーティクルエフェクト（爆発・炎など）を出したい</div>
+            <div class="card-tags"><span class="tag">VFX::Start</span><span class="tag">EmitterData</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p><code>EmitterData</code> にパラメータを設定して <code>VFX::Start</code> を呼ぶと、パーティクルが生成されます。</p>
+<pre><code>EmitterData e;
+e.textureFileName = <str>"Assets/fire.png"</str>;
+e.position     = GetPosition();
+e.positionRnd  = XMFLOAT3(<num>0.3f</num>, <num>0</num>, <num>0.3f</num>); <cm>// 発生位置のばらつき</cm>
+e.direction    = XMFLOAT3(<num>0</num>, <num>1</num>, <num>0</num>);      <cm>// 上向き</cm>
+e.directionRnd = XMFLOAT3(<num>0.3f</num>, <num>0</num>, <num>0.3f</num>);
+e.speed        = <num>0.15f</num>;
+e.gravity      = <num>-0.005f</num>;
+e.color        = XMFLOAT4(<num>1</num>, <num>0.4f</num>, <num>0</num>, <num>1</num>); <cm>// 橙色</cm>
+e.deltaColor   = XMFLOAT4(<num>0</num>, <num>0</num>, <num>0</num>, <num>-0.03f</num>); <cm>// 透明になる</cm>
+e.lifeTime     = <num>40</num>;
+e.number       = <num>5</num>;   <cm>// 1度に出す粒子数</cm>
+e.isBillBoard  = <kw>true</kw>;
+
+<kw>int</kw> hVFX_ = <ns>VFX</ns>::<fn>Start</fn>(e);
+
+<cm>// エフェクトを途中で止める場合</cm>
+<ns>VFX</ns>::<fn>End</fn>(hVFX_);</code></pre>
+          <div class="note"><code>VFX::Update()</code> と <code>VFX::Draw()</code> は Main.cpp から自動で呼ばれます。手動で呼ぶ必要はありません。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== DEBUG / CSV ===== -->
+  <div class="cat-section" id="cat-debug">
+    <div class="section-title">デバッグ / CSV (Debug, CsvReader)</div>
+    <div class="cards">
+
+      <div class="card" data-cat="debug" data-kw="デバッグ ログ 出力 Debug Log コンソール 数値">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#4b5563">DEBUG</span>
+          <div class="card-meta">
+            <div class="card-q">デバッグ用に値をコンソールに出力したい</div>
+            <div class="card-tags"><span class="tag">Debug::Log</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p><code>isLineFeed=true</code> で改行します。int・float・string に対応しています。</p>
+<pre><code><ns>Debug</ns>::<fn>Log</fn>(<str>"position: "</str>);
+<ns>Debug</ns>::<fn>Log</fn>(transform_.position_.x);
+<ns>Debug</ns>::<fn>Log</fn>(<str>","</str>);
+<ns>Debug</ns>::<fn>Log</fn>(transform_.position_.z, <kw>true</kw>); <cm>// 改行</cm></code></pre>
+        </div>
+      </div>
+
+      <div class="card" data-cat="debug" data-kw="CSV 読み込み マップ データ CsvReader Load GetValue">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#4b5563">CSV</span>
+          <div class="card-meta">
+            <div class="card-q">CSV ファイルを読み込んでマップデータなどに使いたい</div>
+            <div class="card-tags"><span class="tag">CsvReader::Load</span><span class="tag">GetValue</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code>CsvReader csv;
+csv.<fn>Load</fn>(<str>"Assets/map.csv"</str>);
+
+<kw>for</kw> (<kw>int</kw> y = <num>0</num>; y < csv.<fn>GetHeight</fn>(); y++) {
+    <kw>for</kw> (<kw>int</kw> x = <num>0</kw>; x < csv.<fn>GetWidth</fn>(); x++) {
+        <kw>int</kw> value = csv.<fn>GetValue</fn>(x, y);
+        <kw>if</kw> (value == <num>1</num>) {
+            <cm>// ブロック配置など</cm>
+            PlaceBlock(x, y);
+        }
+    }
+}
+
+<cm>// 文字列として取得したい場合</cm>
+std::string name = csv.<fn>GetString</fn>(<num>0</num>, <num>0</num>);</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ===== RECIPE: 3D ACTION ===== -->
+  <div class="cat-section" id="cat-recipe-3daction">
+    <div class="section-title">🎮 ゲームレシピ — 3Dアクション (TPS / FPS)</div>
+    <div class="cards">
+
+      <!-- 弾を撃つ -->
+      <div class="card" data-cat="recipe-3daction" data-kw="弾 撃つ 射撃 生成 Instantiate Bullet 弾丸 3Dアクション">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#f97316">3DACT</span>
+          <div class="card-meta">
+            <div class="card-q">弾を撃ちたい（ボタンを押したら前方に飛ぶ弾を生成）</div>
+            <div class="card-tags"><span class="tag">Instantiate</span><span class="tag">SetPosition</span><span class="tag">SetRotate</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <span class="recipe-badge action">📐 設計の流れ</span>
+          <div class="flow">
+            <span class="flow-box">Bullet クラス作成</span><span class="flow-arrow">→</span>
+            <span class="flow-box">Player の Update で入力検知</span><span class="flow-arrow">→</span>
+            <span class="flow-box">Instantiate で生成</span><span class="flow-arrow">→</span>
+            <span class="flow-box">Bullet::Update で毎フレーム前進</span><span class="flow-arrow">→</span>
+            <span class="flow-box">寿命切れ / 壁当たりで KillMe</span>
+          </div>
+
+          <div class="recipe-step">
+            <span class="step-num">01</span>
+            <div class="step-body">
+              <p><strong>Bullet クラス（Bullet.h / Bullet.cpp）を作る</strong></p>
+<pre><code><cm>// Bullet.h</cm>
+<kw>class</kw> <tp>Bullet</tp> : <kw>public</kw> <tp>GameObject</tp> {
+    <kw>int</kw> hModel_;
+    XMFLOAT3 dir_;    <cm>// 飛ぶ方向（正規化済み）</cm>
+    <kw>int</kw> life_ = <num>120</num>; <cm>// 寿命フレーム</cm>
+<kw>public</kw>:
+    <tp>Bullet</tp>(<tp>GameObject</tp>* p) : <fn>GameObject</fn>(p, <str>"Bullet"</str>) {}
+    <kw>void</kw> <fn>SetDirection</fn>(XMFLOAT3 d) { dir_ = d; }
+    <kw>void</kw> Initialize() <kw>override</kw>;
+    <kw>void</kw> Update()     <kw>override</kw>;
+    <kw>void</kw> Draw()      <kw>override</kw>;
+    <kw>void</kw> Release()   <kw>override</kw>;
+};</code></pre>
+            </div>
+          </div>
+
+          <div class="recipe-step">
+            <span class="step-num">02</span>
+            <div class="step-body">
+              <p><strong>Bullet::Update で毎フレーム前進 ＆ 寿命管理</strong></p>
+<pre><code><kw>void</kw> Bullet::<fn>Update</fn>() {
+    <kw>const float</kw> SPEED = <num>0.5f</num>;
+    XMFLOAT3 pos = GetPosition();
+    pos.x += dir_.x * SPEED;
+    pos.y += dir_.y * SPEED;
+    pos.z += dir_.z * SPEED;
+    SetPosition(pos);
+
+    <kw>if</kw> (--life_ <= <num>0</num>) KillMe(); <cm>// 寿命切れ</cm>
+}
+
+<kw>void</kw> Bullet::<fn>OnCollision</fn>(<tp>GameObject</tp>* pTarget) <kw>override</kw> {
+    <kw>if</kw> (pTarget->GetObjectName() == <str>"Enemy"</str>) {
+        KillMe(); <cm>// 敵に当たったら消える</cm>
+    }
+}</code></pre>
+            </div>
+          </div>
+
+          <div class="recipe-step">
+            <span class="step-num">03</span>
+            <div class="step-body">
+              <p><strong>Player::Update でボタン検知 → Instantiate</strong></p>
+<pre><code><kw>if</kw> (<ns>Input</ns>::<fn>IsMouseButtonDown</fn>(<num>0</num>)) { <cm>// 左クリック</cm>
+    Bullet* pB = <fn>Instantiate</fn>&lt;Bullet&gt;(<kw>this</kw>);
+    pB->SetPosition(GetPosition());
+
+    <cm>// カメラの向きを「弾の方向」として渡す</cm>
+    XMFLOAT3 camPos = <ns>Camera</ns>::<fn>GetPosition</fn>();
+    XMFLOAT3 camTgt = <ns>Camera</ns>::<fn>GetTarget</fn>();
+    XMFLOAT3 dir = {
+        camTgt.x - camPos.x,
+        camTgt.y - camPos.y,
+        camTgt.z - camPos.z
+    };
+    <cm>// 正規化</cm>
+    <kw>float</kw> len = sqrtf(dir.x*dir.x + dir.y*dir.y + dir.z*dir.z);
+    dir = { dir.x/len, dir.y/len, dir.z/len };
+    pB->SetDirection(dir);
+}</code></pre>
+            </div>
+          </div>
+          <div class="note">弾にもコライダーを追加することを忘れずに。<code>AddCollider(new SphereCollider(...))</code> を Bullet::Initialize 内で呼んでください。</div>
+        </div>
+      </div>
+
+      <!-- 敵を踏んで倒す -->
+      <div class="card" data-cat="recipe-3daction" data-kw="敵 踏む 倒す マリオ 上から 踏みつけ ジャンプ OnCollision">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#f97316">3DACT</span>
+          <div class="card-meta">
+            <div class="card-q">敵を上から踏んで倒したい（マリオ式）</div>
+            <div class="card-tags"><span class="tag">OnCollision</span><span class="tag">GetWorldPosition</span><span class="tag">KillMe</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <span class="recipe-badge action">📐 設計の流れ</span>
+          <div class="flow">
+            <span class="flow-box">Player と Enemy に BoxCollider</span><span class="flow-arrow">→</span>
+            <span class="flow-box">OnCollision で Y 座標を比較</span><span class="flow-arrow">→</span>
+            <span class="flow-box">上から → 敵を倒す</span><span class="flow-arrow">→</span>
+            <span class="flow-box">横から → プレイヤーがダメージ</span>
+          </div>
+<pre><code><cm>// Enemy.cpp の OnCollision</cm>
+<kw>void</kw> Enemy::<fn>OnCollision</fn>(<tp>GameObject</tp>* pTarget) <kw>override</kw> {
+    <kw>if</kw> (pTarget->GetObjectName() != <str>"Player"</str>) <kw>return</kw>;
+
+    XMFLOAT3 playerPos = pTarget->GetWorldPosition();
+    XMFLOAT3 myPos     = GetWorldPosition();
+
+    <cm>// プレイヤーの足元が自分の頭より上なら「踏んだ」と判定</cm>
+    <kw>if</kw> (playerPos.y > myPos.y + <num>0.5f</num>) {
+        <cm>// 踏まれた → 撃破エフェクト＆消滅</cm>
+        EmitterData e;
+        e.position = myPos;
+        e.number   = <num>10</num>;
+        <ns>VFX</ns>::<fn>Start</fn>(e);
+        KillMe();
+    }
+    <cm>// 横・下からの衝突はプレイヤー側の OnCollision でダメージ処理</cm>
+}</code></pre>
+          <div class="note">プレイヤー側の OnCollision でも同様に Y 比較して、横から当たっていたらダメージを与えます。</div>
+        </div>
+      </div>
+
+      <!-- プレイヤーの HP 管理 -->
+      <div class="card" data-cat="recipe-3daction" data-kw="HP ヘルス ライフ ダメージ 無敵時間 点滅">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#f97316">3DACT</span>
+          <div class="card-meta">
+            <div class="card-q">プレイヤーの HP とダメージ無敵時間を管理したい</div>
+            <div class="card-tags"><span class="tag">OnCollision</span><span class="tag">Visible/Invisible</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// Player.h（メンバ変数）</cm>
+<kw>int</kw> hp_           = <num>3</num>;
+<kw>int</kw> invincible_   = <num>0</num>;  <cm>// 無敵フレーム残り</cm>
+
+<cm>// Player::Update</cm>
+<kw>if</kw> (invincible_ > <num>0</num>) {
+    invincible_--;
+    <cm>// 点滅（4フレームごとに切り替え）</cm>
+    (invincible_ % <num>4</num> < <num>2</num>) ? Invisible() : Visible();
+} <kw>else</kw> {
+    Visible();
+}
+
+<cm>// Player::OnCollision</cm>
+<kw>void</kw> Player::<fn>OnCollision</fn>(<tp>GameObject</tp>* pTarget) <kw>override</kw> {
+    <kw>if</kw> (pTarget->GetObjectName() == <str>"Enemy"</str> && invincible_ == <num>0</num>) {
+        hp_--;
+        invincible_ = <num>120</num>; <cm>// 2秒間無敵（60fps換算）</cm>
+        <kw>if</kw> (hp_ <= <num>0</num>) {
+            <cm>// ゲームオーバー処理</cm>
+        }
+    }
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- 敵の追跡AI -->
+      <div class="card" data-cat="recipe-3daction" data-kw="敵 AI 追跡 追いかける 向き ホーミング FindObject">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#f97316">3DACT</span>
+          <div class="card-meta">
+            <div class="card-q">敵をプレイヤーに向かって追跡させたい</div>
+            <div class="card-tags"><span class="tag">FindObject</span><span class="tag">GetWorldPosition</span><span class="tag">SetRotateY</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// Enemy::Update</cm>
+<tp>GameObject</tp>* pPlayer = <fn>FindObject</fn>(<str>"Player"</str>);
+<kw>if</kw> (pPlayer == <kw>nullptr</kw>) <kw>return</kw>;
+
+XMFLOAT3 myPos  = GetWorldPosition();
+XMFLOAT3 target = pPlayer->GetWorldPosition();
+
+<cm>// プレイヤーへの方向ベクトル</cm>
+<kw>float</kw> dx = target.x - myPos.x;
+<kw>float</kw> dz = target.z - myPos.z;
+<kw>float</kw> dist = sqrtf(dx*dx + dz*dz);
+
+<kw>if</kw> (dist > <num>0.1f</num>) {
+    <kw>const float</kw> SPEED = <num>0.05f</num>;
+    SetPosition(
+        myPos.x + dx / dist * SPEED,
+        myPos.y,
+        myPos.z + dz / dist * SPEED
+    );
+    <cm>// プレイヤーの方向に向く（Y回転）</cm>
+    <kw>float</kw> angle = atan2f(dx, dz);
+    SetRotateY(angle);
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- レイキャストで地面に着地 -->
+      <div class="card" data-cat="recipe-3daction" data-kw="重力 落下 着地 地面 高さ RayCast 足場">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#f97316">3DACT</span>
+          <div class="card-meta">
+            <div class="card-q">重力・落下・地面着地を実装したい</div>
+            <div class="card-tags"><span class="tag">Model::RayCast</span><span class="tag">RayCastData</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// Player.h</cm>
+<kw>float</kw> velocityY_ = <num>0.0f</num>;
+<kw>bool</kw>  isGround_  = <kw>false</kw>;
+
+<cm>// Player::Update</cm>
+<kw>const float</kw> GRAVITY = <num>0.01f</num>;
+velocityY_ -= GRAVITY;
+
+XMFLOAT3 pos = GetPosition();
+pos.y += velocityY_;
+
+<cm>// 真下にレイを飛ばして地面高さを得る</cm>
+RayCastData ray;
+ray.start = { pos.x, pos.y + <num>1.0f</num>, pos.z }; <cm>// 足元より少し上から</cm>
+ray.dir   = { <num>0</num>, <num>-1</num>, <num>0</num> };
+<ns>Model</ns>::<fn>RayCast</fn>(hGround_, &ray);
+
+<kw>if</kw> (ray.hit && ray.dist < <num>1.1f</num>) { <cm>// 地面に触れた</cm>
+    pos.y = ray.start.y - ray.dist; <cm>// 地面にスナップ</cm>
+    velocityY_ = <num>0.0f</num>;
+    isGround_  = <kw>true</kw>;
+} <kw>else</kw> {
+    isGround_ = <kw>false</kw>;
+}
+SetPosition(pos);
+
+<cm>// ジャンプ（着地中のみ）</cm>
+<kw>if</kw> (isGround_ && <ns>Input</ns>::<fn>IsKeyDown</fn>(VK_SPACE)) {
+    velocityY_ = <num>0.2f</num>;
+}</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== RECIPE: SHOOTING ===== -->
+  <div class="cat-section" id="cat-recipe-stg">
+    <div class="section-title">🎮 ゲームレシピ — シューティング (弾幕・STG)</div>
+    <div class="cards">
+
+      <!-- 自機の移動と画面端制限 -->
+      <div class="card" data-cat="recipe-stg" data-kw="自機 移動 画面端 制限 クランプ STG シューティング">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#a855f7">STG</span>
+          <div class="card-meta">
+            <div class="card-q">自機を画面内に収めて移動させたい</div>
+            <div class="card-tags"><span class="tag">Input::IsKey</span><span class="tag">SetPosition</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// Player::Update（2D STG 想定 / Z軸固定）</cm>
+<kw>const float</kw> SPEED = <num>3.0f</num>;
+XMFLOAT3 pos = GetPosition();
+
+<kw>if</kw> (<ns>Input</ns>::<fn>IsKey</fn>(VK_LEFT)  || <ns>Input</ns>::<fn>IsKey</fn>(<str>'A'</str>)) pos.x -= SPEED;
+<kw>if</kw> (<ns>Input</ns>::<fn>IsKey</fn>(VK_RIGHT) || <ns>Input</ns>::<fn>IsKey</fn>(<str>'D'</str>)) pos.x += SPEED;
+<kw>if</kw> (<ns>Input</ns>::<fn>IsKey</fn>(VK_UP)    || <ns>Input</ns>::<fn>IsKey</fn>(<str>'W'</str>)) pos.y += SPEED;
+<kw>if</kw> (<ns>Input</ns>::<fn>IsKey</fn>(VK_DOWN)  || <ns>Input</ns>::<fn>IsKey</fn>(<str>'S'</str>)) pos.y -= SPEED;
+
+<cm>// 画面端クランプ（スクリーン解像度に合わせて調整）</cm>
+<kw>const float</kw> X_MIN = <num>-380</num>, X_MAX = <num>380</num>;
+<kw>const float</kw> Y_MIN = <num>-270</num>, Y_MAX = <num>270</num>;
+pos.x = max(X_MIN, min(X_MAX, pos.x));
+pos.y = max(Y_MIN, min(Y_MAX, pos.y));
+
+SetPosition(pos);</code></pre>
+        </div>
+      </div>
+
+      <!-- 自弾を一定間隔で連射 -->
+      <div class="card" data-cat="recipe-stg" data-kw="連射 弾 インターバル タイマー 自弾 ショット 周期">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#a855f7">STG</span>
+          <div class="card-meta">
+            <div class="card-q">自弾を一定間隔で自動連射させたい</div>
+            <div class="card-tags"><span class="tag">Instantiate</span><span class="tag">shotTimer</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// Player.h メンバ</cm>
+<kw>int</kw> shotTimer_ = <num>0</num>;
+<kw>const int</kw> SHOT_INTERVAL = <num>8</num>; <cm>// 8フレームに1発</cm>
+
+<cm>// Player::Update</cm>
+shotTimer_++;
+<kw>if</kw> (shotTimer_ >= SHOT_INTERVAL) {
+    shotTimer_ = <num>0</num>;
+    PlayerBullet* pB = <fn>Instantiate</fn>&lt;PlayerBullet&gt;(<kw>this</kw>);
+    pB->SetPosition(GetPosition());
+}
+
+<cm>// PlayerBullet::Update（上方向に飛ぶ）</cm>
+XMFLOAT3 pos = GetPosition();
+pos.y += <num>8.0f</num>;
+SetPosition(pos);
+<kw>if</kw> (pos.y > <num>600</num>) KillMe(); <cm>// 画面外で削除</cm></code></pre>
+          <div class="note">ショットキー（例: Z キー）で押している間だけ発射する場合は、<code>if</code> の条件に <code>&& Input::IsKey('Z')</code> を追加してください。</div>
+        </div>
+      </div>
+
+      <!-- 弾幕パターン（放射状） -->
+      <div class="card" data-cat="recipe-stg" data-kw="弾幕 放射状 円 全方位 ばらまき ループ 角度">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#a855f7">STG</span>
+          <div class="card-meta">
+            <div class="card-q">敵に放射状の弾幕を撃たせたい（全方位ショット）</div>
+            <div class="card-tags"><span class="tag">Instantiate</span><span class="tag">sinf/cosf</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// Enemy::FireRadial（n方向に均等に弾を撒く）</cm>
+<kw>void</kw> Enemy::<fn>FireRadial</fn>(<kw>int</kw> count, <kw>float</kw> speed) {
+    <kw>float</kw> step = XM_2PI / count;  <cm>// 360° ÷ 弾数</cm>
+    <kw>for</kw> (<kw>int</kw> i = <num>0</num>; i < count; i++) {
+        <kw>float</kw> angle = step * i;
+        EnemyBullet* pB = <fn>Instantiate</fn>&lt;EnemyBullet&gt;(<kw>this</kw>);
+        pB->SetPosition(GetWorldPosition());
+        pB->SetVelocity(XMFLOAT3(
+            cosf(angle) * speed,
+            sinf(angle) * speed,
+            <num>0</num>
+        ));
+    }
+}
+
+<cm>// 例: 8方向に発射</cm>
+<kw>if</kw> (fireTimer_++ % <num>60</num> == <num>0</num>) {
+    <fn>FireRadial</fn>(<num>8</num>, <num>4.0f</num>);
+}</code></pre>
+          <div class="note">EnemyBullet に <code>SetVelocity(XMFLOAT3)</code> を持たせて、Update で毎フレーム座標に足すのが基本パターンです。</div>
+        </div>
+      </div>
+
+      <!-- 弾幕パターン（渦巻き） -->
+      <div class="card" data-cat="recipe-stg" data-kw="弾幕 渦巻き スパイラル 回転 弾 角度 ずらし">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#a855f7">STG</span>
+          <div class="card-meta">
+            <div class="card-q">渦巻き弾幕を撃たせたい（スパイラルショット）</div>
+            <div class="card-tags"><span class="tag">angleOffset</span><span class="tag">sinf/cosf</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// Enemy.h メンバ</cm>
+<kw>float</kw> angleOffset_ = <num>0.0f</num>;
+
+<cm>// Enemy::Update</cm>
+<kw>if</kw> (fireTimer_++ % <num>4</num> == <num>0</num>) {
+    EnemyBullet* pB = <fn>Instantiate</fn>&lt;EnemyBullet&gt;(<kw>this</kw>);
+    pB->SetPosition(GetWorldPosition());
+    pB->SetVelocity(XMFLOAT3(
+        cosf(angleOffset_) * <num>3.0f</num>,
+        sinf(angleOffset_) * <num>3.0f</num>,
+        <num>0</num>
+    ));
+    <cm>// 毎回角度をずらすと渦巻きになる</cm>
+    angleOffset_ += <num>0.3f</num>;
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- スコアとハイスコア -->
+      <div class="card" data-cat="recipe-stg" data-kw="スコア ハイスコア 加算 表示 Text 数字">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#a855f7">STG</span>
+          <div class="card-meta">
+            <div class="card-q">スコアを加算して画面に表示したい</div>
+            <div class="card-tags"><span class="tag">Text::Draw</span><span class="tag">static変数</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>スコアはシーンをまたいで保持したいので <code>static</code> か専用の管理クラスに持たせるのが定番です。</p>
+<pre><code><cm>// GameData.h（スコア管理をシンプルにまとめる例）</cm>
+<kw>namespace</kw> GameData {
+    <kw>inline int</kw> score    = <num>0</num>;
+    <kw>inline int</kw> hiScore  = <num>0</num>;
+
+    <kw>inline void</kw> AddScore(<kw>int</kw> v) {
+        score += v;
+        <kw>if</kw> (score > hiScore) hiScore = score;
+    }
+}
+
+<cm>// 敵撃破時に呼ぶ</cm>
+GameData::<fn>AddScore</fn>(<num>100</num>);
+
+<cm>// UI クラスの Draw</cm>
+text_.<fn>Draw</fn>(<num>10</num>, <num>10</num>, <str>"SCORE:"</str>);
+text_.<fn>Draw</fn>(<num>90</num>, <num>10</num>, GameData::score);
+text_.<fn>Draw</fn>(<num>10</num>, <num>30</num>, <str>"HI   :"</str>);
+text_.<fn>Draw</fn>(<num>90</num>, <num>30</num>, GameData::hiScore);</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== RECIPE: PUZZLE ===== -->
+  <div class="cat-section" id="cat-recipe-puzzle">
+    <div class="section-title">🎮 ゲームレシピ — パズル・ステージクリア型</div>
+    <div class="cards">
+
+      <!-- スイッチを踏んだら扉が開く -->
+      <div class="card" data-cat="recipe-puzzle" data-kw="スイッチ 扉 ドア ギミック トリガー OnCollision FindObject">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#06b6d4">PZZL</span>
+          <div class="card-meta">
+            <div class="card-q">スイッチを踏んだら扉を開けたい</div>
+            <div class="card-tags"><span class="tag">OnCollision</span><span class="tag">FindObject</span><span class="tag">Leave/Enter</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <span class="recipe-badge puzzle">📐 設計の流れ</span>
+          <div class="flow">
+            <span class="flow-box">Switch クラス</span><span class="flow-arrow">→</span>
+            <span class="flow-box">OnCollision でプレイヤー検知</span><span class="flow-arrow">→</span>
+            <span class="flow-box">FindObject で Door を取得</span><span class="flow-arrow">→</span>
+            <span class="flow-box">Door::Open() を呼ぶ</span>
+          </div>
+
+          <div class="recipe-step">
+            <span class="step-num">01</span>
+            <div class="step-body">
+              <p><strong>Switch クラス — 踏まれたら Door に通知</strong></p>
+<pre><code><kw>void</kw> Switch::<fn>OnCollision</fn>(<tp>GameObject</tp>* pTarget) <kw>override</kw> {
+    <kw>if</kw> (pTarget->GetObjectName() != <str>"Player"</str>) <kw>return</kw>;
+    <kw>if</kw> (isActivated_) <kw>return</kw>; <cm>// 一度だけ</cm>
+
+    isActivated_ = <kw>true</kw>;
+
+    <cm>// 対応する扉を名前で検索して開ける</cm>
+    <tp>GameObject</tp>* pDoor = <fn>FindObject</fn>(<str>"Door_A"</str>);
+    <kw>if</kw> (pDoor)
+        <kw>static_cast</kw>&lt;Door*&gt;(pDoor)->Open();
+}</code></pre>
+            </div>
+          </div>
+
+          <div class="recipe-step">
+            <span class="step-num">02</span>
+            <div class="step-body">
+              <p><strong>Door クラス — Open() でアニメーション開始</strong></p>
+<pre><code><kw>class</kw> <tp>Door</tp> : <kw>public</kw> <tp>GameObject</tp> {
+    <kw>bool</kw>  isOpening_ = <kw>false</kw>;
+    <kw>float</kw> openProgress_ = <num>0.0f</num>; <cm>// 0.0 = 閉, 1.0 = 全開</cm>
+<kw>public</kw>:
+    <kw>void</kw> Open() { isOpening_ = <kw>true</kw>; }
+
+    <kw>void</kw> <fn>Update</fn>() <kw>override</kw> {
+        <kw>if</kw> (!isOpening_) <kw>return</kw>;
+        openProgress_ = min(<num>1.0f</num>, openProgress_ + <num>0.02f</num>);
+
+        <cm>// 扉を上に移動させて「開く」演出</cm>
+        XMFLOAT3 pos = GetPosition();
+        pos.y = baseY_ + openProgress_ * <num>4.0f</num>;
+        SetPosition(pos);
+
+        <kw>if</kw> (openProgress_ >= <num>1.0f</num>) {
+            Leave();      <cm>// 完全に開いたら Update を止める</cm>
+            Invisible();  <cm>// 非表示にする（当たり判定も無効化するなら ClearCollider）</cm>
+        }
+    }
+};</code></pre>
+            </div>
+          </div>
+          <div class="note">複数スイッチで1つの扉を開ける場合は、Door 側にカウンタを持たせて「全スイッチが踏まれたら開く」に拡張できます。</div>
+        </div>
+      </div>
+
+      <!-- ゴールに到達したらステージクリア -->
+      <div class="card" data-cat="recipe-puzzle" data-kw="ゴール クリア シーン遷移 ChangeScene 到達 判定">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#06b6d4">PZZL</span>
+          <div class="card-meta">
+            <div class="card-q">ゴールに触れたらステージクリアにしたい</div>
+            <div class="card-tags"><span class="tag">OnCollision</span><span class="tag">ChangeScene</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// Goal.cpp</cm>
+<kw>void</kw> Goal::<fn>OnCollision</fn>(<tp>GameObject</tp>* pTarget) <kw>override</kw> {
+    <kw>if</kw> (pTarget->GetObjectName() != <str>"Player"</str>) <kw>return</kw>;
+
+    <cm>// クリア演出（VFX など）</cm>
+    EmitterData e;
+    e.position = GetWorldPosition();
+    e.number   = <num>30</num>;
+    e.color    = XMFLOAT4(<num>1</num>, <num>1</num>, <num>0</num>, <num>1</num>); <cm>// 金色</cm>
+    <ns>VFX</ns>::<fn>Start</fn>(e);
+
+    <cm>// リザルトシーンへ遷移</cm>
+    <tp>GameObject</tp>* pSM = <fn>FindObject</fn>(<str>"SceneManager"</str>);
+    <kw>static_cast</kw>&lt;SceneManager*&gt;(pSM)->ChangeScene(SCENE_ID_RESULT);
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- 重い箱を押してスイッチを起動 -->
+      <div class="card" data-cat="recipe-puzzle" data-kw="箱 押す 移動 プッシュ コライダー ブロック パズル">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#06b6d4">PZZL</span>
+          <div class="card-meta">
+            <div class="card-q">プレイヤーが箱を押して動かせるようにしたい</div>
+            <div class="card-tags"><span class="tag">OnCollision</span><span class="tag">GetWorldPosition</span><span class="tag">SetPosition</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>衝突した方向を Y 座標の比較で検出し、横から押されたときだけ箱を動かします。</p>
+<pre><code><cm>// Box::OnCollision</cm>
+<kw>void</kw> Box::<fn>OnCollision</fn>(<tp>GameObject</tp>* pTarget) <kw>override</kw> {
+    <kw>if</kw> (pTarget->GetObjectName() != <str>"Player"</str>) <kw>return</kw>;
+
+    XMFLOAT3 myPos     = GetWorldPosition();
+    XMFLOAT3 playerPos = pTarget->GetWorldPosition();
+
+    <cm>// 上から乗っている場合は押さない（Y差が大きい）</cm>
+    <kw>if</kw> (playerPos.y > myPos.y + <num>0.8f</num>) <kw>return</kw>;
+
+    <cm>// プレイヤーから箱への水平方向に押し出す</cm>
+    <kw>float</kw> dx = myPos.x - playerPos.x;
+    <kw>float</kw> dz = myPos.z - playerPos.z;
+    <kw>float</kw> len = sqrtf(dx*dx + dz*dz);
+    <kw>if</kw> (len < <num>0.001f</num>) <kw>return</kw>;
+
+    <kw>const float</kw> PUSH = <num>0.1f</num>;
+    SetPosition(
+        myPos.x + dx/len * PUSH,
+        myPos.y,
+        myPos.z + dz/len * PUSH
+    );
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- CSVでステージ読み込み -->
+      <div class="card" data-cat="recipe-puzzle" data-kw="CSV ステージ マップ 読み込み タイル 生成 Instantiate CsvReader">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#06b6d4">PZZL</span>
+          <div class="card-meta">
+            <div class="card-q">CSV ファイルからステージを自動生成したい</div>
+            <div class="card-tags"><span class="tag">CsvReader</span><span class="tag">Instantiate</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+          <p>Excel 等で作った CSV をそのままステージデータとして使えます。</p>
+<pre><code><cm>// map.csv の例（0=空白, 1=床, 2=スイッチ, 3=ゴール）</cm>
+<cm>// 0,0,1,1,1,0</cm>
+<cm>// 0,1,0,0,2,0</cm>
+<cm>// 1,1,0,0,0,3</cm>
+
+<kw>void</kw> GameScene::<fn>Initialize</fn>() {
+    CsvReader csv;
+    csv.<fn>Load</fn>(<str>"Assets/stage01.csv"</str>);
+
+    <kw>const float</kw> CELL = <num>2.0f</num>; <cm>// 1セルのワールドサイズ</cm>
+
+    <kw>for</kw> (<kw>int</kw> y = <num>0</num>; y < (<kw>int</kw>)csv.<fn>GetHeight</fn>(); y++) {
+        <kw>for</kw> (<kw>int</kw> x = <num>0</num>; x < (<kw>int</kw>)csv.<fn>GetWidth</fn>(); x++) {
+            <kw>int</kw> val = csv.<fn>GetValue</fn>(x, y);
+            XMFLOAT3 pos = { x*CELL, <num>0</num>, y*CELL };
+            <kw>switch</kw> (val) {
+            <kw>case</kw> <num>1</num>: {
+                Floor* p = <fn>Instantiate</fn>&lt;Floor&gt;(<kw>this</kw>);
+                p->SetPosition(pos); <kw>break</kw>;
+            }
+            <kw>case</kw> <num>2</num>: {
+                Switch* p = <fn>Instantiate</fn>&lt;Switch&gt;(<kw>this</kw>);
+                p->SetPosition(pos); <kw>break</kw>;
+            }
+            <kw>case</kw> <num>3</num>: {
+                Goal* p = <fn>Instantiate</fn>&lt;Goal&gt;(<kw>this</kw>);
+                p->SetPosition(pos); <kw>break</kw>;
+            }
+            }
+        }
+    }
+}</code></pre>
+          <div class="note">ステージファイルを差し替えるだけで面を追加できます。ステージ番号を変数で持てば、クリア時に次のファイルを読む実装も簡単です。</div>
+        </div>
+      </div>
+
+      <!-- タイマー制限 -->
+      <div class="card" data-cat="recipe-puzzle" data-kw="タイマー 制限時間 カウントダウン Text 秒 フレーム">
+        <div class="card-header" onclick="toggle(this)">
+          <span class="card-icon" style="background:#06b6d4">PZZL</span>
+          <div class="card-meta">
+            <div class="card-q">制限時間（カウントダウン）をつけたい</div>
+            <div class="card-tags"><span class="tag">Text::Draw</span><span class="tag">frameCount</span></div>
+          </div>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="card-body">
+<pre><code><cm>// StageTimer.h メンバ</cm>
+<kw>int</kw> limitSec_  = <num>60</num>;  <cm>// 制限秒数</cm>
+<kw>int</kw> frameCount_ = <num>0</num>;
+Text text_;
+
+<cm>// StageTimer::Update</cm>
+frameCount_++;
+<kw>if</kw> (frameCount_ % <num>60</num> == <num>0</num>) { <cm>// 60fps 換算で 1 秒</cm>
+    limitSec_--;
+    <kw>if</kw> (limitSec_ <= <num>0</num>) {
+        <cm>// タイムオーバー → ゲームオーバー処理</cm>
+        <tp>GameObject</tp>* pSM = <fn>FindObject</fn>(<str>"SceneManager"</str>);
+        <kw>static_cast</kw>&lt;SceneManager*&gt;(pSM)->ChangeScene(SCENE_ID_GAMEOVER);
+    }
+}
+
+<cm>// StageTimer::Draw</cm>
+text_.<fn>Draw</fn>(<num>10</num>, <num>10</num>, <str>"TIME:"</str>);
+text_.<fn>Draw</fn>(<num>80</num>, <num>10</num>, limitSec_);</code></pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+  // toggle card
+  function toggle(header) {
+    const card = header.closest('.card');
+    card.classList.toggle('open');
+  }
+
+  // sidebar filter
+  function filterCat(btn, cat) {
+    document.querySelectorAll('.sidebar-link').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const sections = document.querySelectorAll('.cat-section');
+    const cards = document.querySelectorAll('.card');
+
+    if (cat === 'all') {
+      sections.forEach(s => s.classList.remove('hidden'));
+      cards.forEach(c => c.classList.remove('hidden'));
+    } else {
+      sections.forEach(s => {
+        s.classList.toggle('hidden', s.id !== 'cat-' + cat);
+      });
+      // also show cards within the matched section
+      document.querySelectorAll('.card').forEach(c => {
+        const inSection = c.closest('.cat-section') && c.closest('.cat-section').id === 'cat-' + cat;
+        c.classList.toggle('hidden', !inSection);
+      });
+    }
+    // reset search
+    document.getElementById('search').value = '';
+  }
+
+  // search
+  document.getElementById('search').addEventListener('input', function() {
+    const q = this.value.trim().toLowerCase();
+
+    // show all sections first
+    document.querySelectorAll('.cat-section').forEach(s => s.classList.remove('hidden'));
+
+    if (!q) {
+      document.querySelectorAll('.card').forEach(c => c.classList.remove('hidden'));
+      return;
+    }
+
+    document.querySelectorAll('.sidebar-link').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-cat="all"]').classList.add('active');
+
+    document.querySelectorAll('.card').forEach(card => {
+      const text = (card.querySelector('.card-q').textContent + ' ' +
+                    (card.dataset.kw || '') + ' ' +
+                    [...card.querySelectorAll('.tag')].map(t=>t.textContent).join(' ')
+                   ).toLowerCase();
+      card.classList.toggle('hidden', !text.includes(q));
+    });
+
+    // hide empty sections
+    document.querySelectorAll('.cat-section').forEach(sec => {
+      const visible = [...sec.querySelectorAll('.card')].some(c => !c.classList.contains('hidden'));
+      sec.classList.toggle('hidden', !visible);
+    });
+  });
+</script>
+</body>
+</html>
