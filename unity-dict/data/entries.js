@@ -1668,13 +1668,1040 @@ int   n = Random.Range(0, 5);     // int:   0〜4`,
         note:"対応するOnDisable()はSetActive(false)時に呼ばれます。" },
     ],
     related: [5, 28, 29]
+  },
+
+  // ================================================================
+  // UI・HUD追加項目 (id: 32〜38)
+  // ================================================================
+
+  {
+    id: 32,
+    icon: "🔢",
+    title: "スコアをリアルタイム表示したい",
+    desc: "加算されるたびにTextMeshProのスコア表示を更新する",
+    cats: ["ui","data"],
+    genres: ["2daction","shooting","runner","puzzle"],
+    diff: 1,
+    components: ["TextMeshProUGUI","static","シングルトン"],
+    idea: "ScoreManagerをシングルトンにしてどこからでもAddScore()を呼べるようにし、加算のたびにTextを更新します。表示の更新はスコアを変えた瞬間だけ行うのがポイントです。",
+    code: `<span class="cm">// ScoreUI.cs（CanvasのTextオブジェクトに付ける）</span>
+<span class="kw">using</span> TMPro;
+
+<span class="kw">public class</span> <span class="type">ScoreUI</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">TextMeshProUGUI</span> scoreText;
+    <span class="kw">private int</span> score = <span class="num">0</span>;
+
+    <span class="kw">public static</span> <span class="type">ScoreUI</span> Instance;
+    <span class="kw">void</span> <span class="fn">Awake</span>() => Instance = <span class="kw">this</span>;
+
+    <span class="kw">void</span> <span class="fn">Start</span>() => <span class="fn">UpdateDisplay</span>();
+
+    <span class="kw">public void</span> <span class="fn">AddScore</span>(<span class="kw">int</span> point)
+    {
+        score += point;
+        <span class="fn">UpdateDisplay</span>();
+    }
+
+    <span class="kw">void</span> <span class="fn">UpdateDisplay</span>()
+    {
+        <span class="cm">// D6で6桁ゼロ埋め表示（例: 000100）</span>
+        scoreText.text = <span class="str">"SCORE: "</span> + score.<span class="fn">ToString</span>(<span class="str">"D6"</span>);
+    }
+}
+
+<span class="cm">// 敵や硬貨など、スコア加算側からはこう呼ぶ</span>
+<span class="cm">// ScoreUI.Instance.AddScore(100);</span>`,
+    warn: "TextMeshProUGUIを使うにはPackage ManagerでText Mesh Proをインストールし、using TMPro;が必要です。",
+    keywords: [
+      { name:"ToString(\"D6\")", kind:"method", summary:"数値を書式指定して文字列に変換する",
+        desc:"書式指定文字列で数値の見た目を制御します。\"D6\"は6桁のゼロ埋め整数、\"F1\"は小数1桁、\"N0\"はカンマ区切り整数などがよく使われます。",
+        syntax:`score.ToString("D6");  // → "000100"
+score.ToString("N0");  // → "1,000"
+time.ToString("F1");   // → "12.3"`,
+        note:"string.Format()や$\"{score:D6}\"（文字列補間）でも同じ書式が使えます。" },
+    ],
+    related: [11, 13, 33]
+  },
+
+  {
+    id: 33,
+    icon: "🎉",
+    title: "ゲームクリア画面を作りたい",
+    desc: "条件達成時にクリアUIを表示してリザルトを見せる",
+    cats: ["ui","scene"],
+    genres: ["2daction","shooting","puzzle","runner"],
+    diff: 1,
+    components: ["SetActive","TextMeshProUGUI","Time.timeScale"],
+    idea: "クリアパネル（CanvasのPanel）を最初はSetActive(false)にしておき、クリア条件を満たしたらSetActive(true)にします。同時にTime.timeScaleを0にするとゲームを止められます。",
+    code: `<span class="cm">// GameClearManager.cs</span>
+<span class="kw">using</span> TMPro;
+<span class="kw">using</span> UnityEngine.SceneManagement;
+
+<span class="kw">public class</span> <span class="type">GameClearManager</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">GameObject</span>        clearPanel;   <span class="cm">// クリアUIのPanel</span>
+    <span class="kw">public</span> <span class="type">TextMeshProUGUI</span>   scoreText;    <span class="cm">// リザルトスコア表示</span>
+
+    <span class="kw">public static</span> <span class="type">GameClearManager</span> Instance;
+    <span class="kw">void</span> <span class="fn">Awake</span>()
+    {
+        Instance = <span class="kw">this</span>;
+        clearPanel.<span class="fn">SetActive</span>(<span class="kw">false</span>); <span class="cm">// 最初は非表示</span>
+    }
+
+    <span class="kw">public void</span> <span class="fn">ShowClear</span>(<span class="kw">int</span> finalScore)
+    {
+        clearPanel.<span class="fn">SetActive</span>(<span class="kw">true</span>);
+        scoreText.text = <span class="str">"SCORE: "</span> + finalScore.<span class="fn">ToString</span>(<span class="str">"N0"</span>);
+        <span class="type">Time</span>.timeScale = <span class="num">0f</span>; <span class="cm">// ゲームを一時停止</span>
+    }
+
+    <span class="cm">// ボタンから呼ぶ</span>
+    <span class="kw">public void</span> <span class="fn">OnRetryButton</span>()
+    {
+        <span class="type">Time</span>.timeScale = <span class="num">1f</span>; <span class="cm">// 必ず戻す！</span>
+        <span class="type">SceneManager</span>.<span class="fn">LoadScene</span>(
+            <span class="type">SceneManager</span>.GetActiveScene().name);
+    }
+
+    <span class="kw">public void</span> <span class="fn">OnTitleButton</span>()
+    {
+        <span class="type">Time</span>.timeScale = <span class="num">1f</span>;
+        <span class="type">SceneManager</span>.<span class="fn">LoadScene</span>(<span class="str">"Title"</span>);
+    }
+}`,
+    warn: "Time.timeScale = 0fにしたままシーンを移動するとずっとゲームが止まります。シーン移動前に必ず1fに戻してください。",
+    keywords: [
+      { name:"Time.timeScale", kind:"property", summary:"ゲーム全体の時間の流れる速さを制御する",
+        desc:"0にするとUpdate()以外のすべての時間依存処理が止まります（ポーズ）。1が通常速度、2にすると2倍速になります。WaitForSecondsもtimeScaleの影響を受けます。",
+        syntax:"Time.timeScale = 0f; // 一時停止\nTime.timeScale = 1f; // 再開",
+        note:"timeScaleの影響を受けないタイマーにはTime.unscaledDeltaTimeを使います。" },
+    ],
+    related: [8, 35, 32]
+  },
+
+  {
+    id: 34,
+    icon: "🏠",
+    title: "タイトル画面からゲームを始めたい",
+    desc: "タイトルシーンにスタートボタンを置いてゲームシーンへ遷移する",
+    cats: ["ui","scene"],
+    genres: ["2daction","shooting","puzzle","runner"],
+    diff: 1,
+    components: ["SceneManager","Button","OnClick"],
+    idea: "UnityのUI Buttonコンポーネントを使い、OnClick()にシーン遷移メソッドを登録するだけです。Build Settingsへのシーン追加を忘れずに。",
+    code: `<span class="cm">// TitleManager.cs（タイトルシーンのGameObjectに付ける）</span>
+<span class="kw">using</span> UnityEngine.SceneManagement;
+
+<span class="kw">public class</span> <span class="type">TitleManager</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="cm">// Buttonコンポーネントの OnClick() にこのメソッドを登録する</span>
+    <span class="kw">public void</span> <span class="fn">OnStartButton</span>()
+    {
+        <span class="type">SceneManager</span>.<span class="fn">LoadScene</span>(<span class="str">"Game"</span>);
+    }
+
+    <span class="kw">public void</span> <span class="fn">OnQuitButton</span>()
+    {
+        <span class="cm">// エディタ上では動作しない（ビルド後のみ有効）</span>
+        <span class="type">Application</span>.<span class="fn">Quit</span>();
+    }
+}`,
+    warn: "File > Build Settings に「Title」「Game」などシーンを追加しないとLoadScene()でエラーになります。シーン0がゲーム起動時に最初に開くシーンです。",
+    keywords: [
+      { name:"Button.OnClick()", kind:"event", summary:"ボタンが押されたときに呼ぶ関数をInspectorで登録する",
+        desc:"ButtonコンポーネントのInspectorにある「On Click()」リストに、呼び出したいGameObjectとメソッドを登録します。publicなメソッドのみ表示されます。コードからはbutton.onClick.AddListener(メソッド)でも登録できます。",
+        syntax:"// Inspectorから登録する場合はpublicメソッドを作るだけ\npublic void OnStartButton() { }",
+        note:"メソッドの引数はなし、またはint/float/string/boolの1つのみ受け付けます。" },
+      { name:"Application.Quit()", kind:"method", summary:"アプリケーションを終了する",
+        desc:"ビルドされたアプリを終了します。Unityエディタ上では動作しません（エディタ終了の代わりにUnityEditor.EditorApplication.isPlayingをfalseにする方法があります）。",
+        syntax:"Application.Quit();",
+        note:"エディタ上でテストしたい場合は#if UNITY_EDITORディレクティブで分岐させましょう。" },
+    ],
+    related: [8, 33, 35]
+  },
+
+  {
+    id: 35,
+    icon: "⏸️",
+    title: "ポーズ（一時停止）を実装したい",
+    desc: "ESCキーでゲームを止めてポーズメニューを表示する",
+    cats: ["ui","scene"],
+    genres: ["2daction","shooting","puzzle"],
+    diff: 2,
+    components: ["Time.timeScale","SetActive","Input.GetKeyDown"],
+    idea: "Time.timeScale = 0fでゲームを止め、ポーズパネルをSetActive(true)で表示します。UIのアニメーションやコルーチンはtimeScaleの影響を受けるので注意が必要です。",
+    code: `<span class="cm">// PauseManager.cs</span>
+<span class="kw">using</span> UnityEngine.SceneManagement;
+
+<span class="kw">public class</span> <span class="type">PauseManager</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">GameObject</span> pausePanel;
+    <span class="kw">private bool</span>      isPaused = <span class="kw">false</span>;
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="kw">if</span> (<span class="type">Input</span>.<span class="fn">GetKeyDown</span>(<span class="type">KeyCode</span>.Escape))
+            <span class="fn">TogglePause</span>();
+    }
+
+    <span class="kw">public void</span> <span class="fn">TogglePause</span>()
+    {
+        isPaused = !isPaused;
+        <span class="type">Time</span>.timeScale = isPaused ? <span class="num">0f</span> : <span class="num">1f</span>;
+        pausePanel.<span class="fn">SetActive</span>(isPaused);
+    }
+
+    <span class="cm">// ポーズパネルの「再開」ボタンから呼ぶ</span>
+    <span class="kw">public void</span> <span class="fn">OnResumeButton</span>()
+    {
+        isPaused = <span class="kw">false</span>;
+        <span class="type">Time</span>.timeScale = <span class="num">1f</span>;
+        pausePanel.<span class="fn">SetActive</span>(<span class="kw">false</span>);
+    }
+
+    <span class="cm">// ポーズパネルの「タイトルへ」ボタンから呼ぶ</span>
+    <span class="kw">public void</span> <span class="fn">OnTitleButton</span>()
+    {
+        <span class="type">Time</span>.timeScale = <span class="num">1f</span>; <span class="cm">// 必ず戻す</span>
+        <span class="type">SceneManager</span>.<span class="fn">LoadScene</span>(<span class="str">"Title"</span>);
+    }
+}`,
+    warn: "timeScale = 0fのままシーン遷移するとタイトルでもゲームが止まったままになります。OnTitleButtonでtimeScaleを1fに戻すのを忘れずに。",
+    keywords: [
+      { name:"三項演算子（? :）", kind:"class", summary:"if-elseを1行で書く条件式",
+        desc:"「条件 ? trueの値 : falseの値」の形で書きます。isPaused ? 0f : 1fなら「isPausedがtrueなら0f、falseなら1f」という意味です。単純なif-elseを短く書くのに便利です。",
+        syntax:"Time.timeScale = isPaused ? 0f : 1f;",
+        note:"複雑な条件には通常のif-elseを使う方が読みやすいです。" },
+    ],
+    related: [33, 34, 8]
+  },
+
+  {
+    id: 36,
+    icon: "❤️",
+    title: "残機をアイコンで表示したい",
+    desc: "ハートアイコンを残機の数だけ並べて表示する",
+    cats: ["ui"],
+    genres: ["2daction","shooting"],
+    diff: 2,
+    components: ["Instantiate","Transform","List","LayoutGroup"],
+    idea: "ハートアイコンのPrefabを残機分だけInstantiateしてHorizontalLayoutGroupの中に並べます。ダメージ時は末尾のアイコンをDestroyするだけで更新できます。",
+    code: `<span class="cm">// LifeUI.cs</span>
+<span class="kw">using</span> System.Collections.Generic;
+
+<span class="kw">public class</span> <span class="type">LifeUI</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">GameObject</span>  heartPrefab;  <span class="cm">// ハートアイコンのPrefab</span>
+    <span class="kw">public</span> <span class="type">Transform</span>   heartContainer; <span class="cm">// HorizontalLayoutGroupのTransform</span>
+    <span class="kw">public int</span>         maxLives = <span class="num">3</span>;
+
+    <span class="kw">private</span> <span class="type">List</span>&lt;<span class="type">GameObject</span>&gt; hearts = <span class="kw">new</span> <span class="type">List</span>&lt;<span class="type">GameObject</span>&gt;();
+
+    <span class="kw">public static</span> <span class="type">LifeUI</span> Instance;
+    <span class="kw">void</span> <span class="fn">Awake</span>() => Instance = <span class="kw">this</span>;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        <span class="cm">// 最初に残機分のハートを生成</span>
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i < maxLives; i++)
+        {
+            <span class="type">GameObject</span> h = <span class="type">Instantiate</span>(heartPrefab, heartContainer);
+            hearts.<span class="fn">Add</span>(h);
+        }
+    }
+
+    <span class="kw">public void</span> <span class="fn">LoseLife</span>()
+    {
+        <span class="kw">if</span> (hearts.Count == <span class="num">0</span>) <span class="kw">return</span>;
+
+        <span class="cm">// 末尾のハートを削除</span>
+        <span class="kw">int</span> last = hearts.Count - <span class="num">1</span>;
+        <span class="type">Destroy</span>(hearts[last]);
+        hearts.<span class="fn">RemoveAt</span>(last);
+
+        <span class="kw">if</span> (hearts.Count == <span class="num">0</span>)
+            <span class="type">Debug</span>.<span class="fn">Log</span>(<span class="str">"Game Over"</span>);
+    }
+}`,
+    warn: "HorizontalLayoutGroupコンポーネントを付けたGameObjectをheartContainerに指定すると、ハートが自動で等間隔に並びます。忘れるとすべて重なって表示されます。",
+    keywords: [
+      { name:"HorizontalLayoutGroup", kind:"class", summary:"子オブジェクトを横一列に自動整列するUI",
+        desc:"このコンポーネントを付けたオブジェクトの子オブジェクトが自動で横並びになります。SpacingやPaddingで間隔を調整できます。VerticalLayoutGroupは縦並びの版です。",
+        syntax:"// Inspectorで付けるだけ。子オブジェクトが自動整列される",
+        note:"LayoutGroupの付いたオブジェクトの子のRectTransformは自動管理されます。手動で位置を変更しても効きません。" },
+      { name:"List.RemoveAt()", kind:"method", summary:"Listの指定インデックスの要素を削除する",
+        desc:"引数のインデックスの要素をListから取り除きます。Remove(要素)で要素を指定して削除する方法もあります。",
+        syntax:"hearts.RemoveAt(hearts.Count - 1); // 末尾を削除",
+        note:"インデックスが範囲外だとArgumentOutOfRangeExceptionが発生します。Count > 0を確認してから使いましょう。" },
+    ],
+    related: [6, 33, 32]
+  },
+
+  {
+    id: 37,
+    icon: "🌑",
+    title: "フェードイン・フェードアウトしたい",
+    desc: "シーン開始・終了時に画面を暗くしてなめらかに切り替える",
+    cats: ["ui","scene"],
+    genres: ["2daction","shooting","puzzle","runner"],
+    diff: 2,
+    components: ["CanvasGroup","Coroutine","Lerp"],
+    idea: "全画面を覆う黒いImageにCanvasGroupをつけ、alphaを0↔1に変化させます。コルーチンでLerpすれば滑らかなフェードが作れます。",
+    code: `<span class="cm">// FadeManager.cs（DontDestroyOnLoadな常駐オブジェクトに付ける）</span>
+<span class="kw">using</span> UnityEngine.SceneManagement;
+
+<span class="kw">public class</span> <span class="type">FadeManager</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">CanvasGroup</span> fadePanel; <span class="cm">// 黒いImageにCanvasGroupを付けたもの</span>
+    <span class="kw">public float</span>      fadeDuration = <span class="num">1f</span>;
+
+    <span class="kw">public static</span> <span class="type">FadeManager</span> Instance;
+    <span class="kw">void</span> <span class="fn">Awake</span>()
+    {
+        Instance = <span class="kw">this</span>;
+        <span class="type">DontDestroyOnLoad</span>(<span class="kw">this</span>);
+    }
+
+    <span class="kw">void</span> <span class="fn">Start</span>() => <span class="fn">StartCoroutine</span>(<span class="fn">FadeIn</span>());
+
+    <span class="kw">public void</span> <span class="fn">LoadScene</span>(<span class="kw">string</span> sceneName)
+    {
+        <span class="fn">StartCoroutine</span>(<span class="fn">FadeOutAndLoad</span>(sceneName));
+    }
+
+    <span class="type">IEnumerator</span> <span class="fn">FadeIn</span>()
+    {
+        fadePanel.alpha = <span class="num">1f</span>;
+        <span class="kw">for</span> (<span class="kw">float</span> t = <span class="num">0</span>; t < fadeDuration; t += <span class="type">Time</span>.deltaTime)
+        {
+            fadePanel.alpha = <span class="num">1f</span> - (t / fadeDuration);
+            <span class="kw">yield return null</span>;
+        }
+        fadePanel.alpha = <span class="num">0f</span>;
+    }
+
+    <span class="type">IEnumerator</span> <span class="fn">FadeOutAndLoad</span>(<span class="kw">string</span> sceneName)
+    {
+        <span class="kw">for</span> (<span class="kw">float</span> t = <span class="num">0</span>; t < fadeDuration; t += <span class="type">Time</span>.deltaTime)
+        {
+            fadePanel.alpha = t / fadeDuration;
+            <span class="kw">yield return null</span>;
+        }
+        fadePanel.alpha = <span class="num">1f</span>;
+        <span class="type">SceneManager</span>.<span class="fn">LoadScene</span>(sceneName);
+    }
+}`,
+    warn: "fadePanelのCanvasはSort Orderを高くして他のUIより前面に来るようにしてください。後ろに隠れるとフェードが見えません。",
+    keywords: [
+      { name:"CanvasGroup", kind:"class", summary:"Canvas配下のUIをまとめて透明度・操作可否を制御する",
+        desc:"alphaで透明度（0〜1）、interactableでUI操作の可否、blocksRaycastsでクリック判定のON/OFFを一括制御できます。フェード演出や、ポーズ中にゲーム画面を操作不能にするなどに使います。",
+        syntax:"canvasGroup.alpha = 0.5f;        // 半透明\ncanvasGroup.interactable = false;  // 操作不可",
+        note:"個々のUIのalphaを変えるより、CanvasGroupで一括管理する方が効率的です。" },
+      { name:"DontDestroyOnLoad()", kind:"method", summary:"シーンをまたいでもオブジェクトを破棄しない",
+        desc:"このメソッドを呼んだGameObjectはシーン遷移後も消えずに残ります。BGMの管理やフェードパネルなど、シーンをまたいで使い続けたいものに使います。",
+        syntax:"DontDestroyOnLoad(this.gameObject);",
+        note:"シーンを戻ったときに重複生成されないよう、シングルトンと組み合わせて「既に存在したら自分をDestroyする」処理を入れるのが定番です。" },
+      { name:"yield return null", kind:"lifecycle", summary:"1フレームだけ処理を中断して次フレームへ",
+        desc:"コルーチン内でyield return nullすると、次のフレームまで処理が止まります。WaitForSeconds()と違い、フレーム単位で細かく処理を刻みたいときに使います。毎フレームalphaを更新するフェードアニメーションに適しています。",
+        syntax:"yield return null; // 1フレーム待って次へ",
+        note:"forループの中でyield return nullすることで、毎フレーム少しずつ変化させるアニメーションが作れます。" },
+    ],
+    related: [8, 33, 35]
+  },
+
+  {
+    id: 38,
+    icon: "🔴",
+    title: "ダメージ時に画面を赤くフラッシュさせたい",
+    desc: "被ダメージ演出として画面全体を一瞬赤く光らせる",
+    cats: ["ui"],
+    genres: ["2daction","shooting"],
+    diff: 2,
+    components: ["CanvasGroup","Image","Coroutine","Color"],
+    idea: "全画面を覆う半透明の赤いImageをCanvasに置いておき、ダメージ時にalphaを一瞬上げてすぐ0に戻すコルーチンを呼びます。",
+    code: `<span class="cm">// DamageFlash.cs</span>
+<span class="kw">using</span> UnityEngine.UI;
+
+<span class="kw">public class</span> <span class="type">DamageFlash</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">Image</span>  flashImage;    <span class="cm">// 赤いImage（全画面サイズ）</span>
+    <span class="kw">public float</span>  flashDuration = <span class="num">0.3f</span>;
+    <span class="kw">public</span> <span class="type">Color</span>  flashColor    = <span class="kw">new</span> <span class="type">Color</span>(<span class="num">1f</span>, <span class="num">0f</span>, <span class="num">0f</span>, <span class="num">0.4f</span>);
+
+    <span class="kw">public static</span> <span class="type">DamageFlash</span> Instance;
+    <span class="kw">void</span> <span class="fn">Awake</span>()
+    {
+        Instance = <span class="kw">this</span>;
+        flashImage.color = <span class="kw">new</span> <span class="type">Color</span>(<span class="num">1f</span>,<span class="num">0f</span>,<span class="num">0f</span>,<span class="num">0f</span>); <span class="cm">// 最初は透明</span>
+    }
+
+    <span class="kw">public void</span> <span class="fn">Flash</span>()
+    {
+        <span class="fn">StopAllCoroutines</span>();
+        <span class="fn">StartCoroutine</span>(<span class="fn">FlashRoutine</span>());
+    }
+
+    <span class="type">IEnumerator</span> <span class="fn">FlashRoutine</span>()
+    {
+        <span class="cm">// 一瞬赤くして徐々に透明に戻す</span>
+        flashImage.color = flashColor;
+
+        <span class="kw">for</span> (<span class="kw">float</span> t = <span class="num">0</span>; t < flashDuration; t += <span class="type">Time</span>.deltaTime)
+        {
+            <span class="kw">float</span> alpha = <span class="type">Mathf</span>.<span class="fn">Lerp</span>(flashColor.a, <span class="num">0f</span>, t / flashDuration);
+            flashImage.color = <span class="kw">new</span> <span class="type">Color</span>(<span class="num">1f</span>, <span class="num">0f</span>, <span class="num">0f</span>, alpha);
+            <span class="kw">yield return null</span>;
+        }
+        flashImage.color = <span class="kw">new</span> <span class="type">Color</span>(<span class="num">1f</span>,<span class="num">0f</span>,<span class="num">0f</span>,<span class="num">0f</span>);
+    }
+}
+
+<span class="cm">// ダメージを受けた側からはこう呼ぶ</span>
+<span class="cm">// DamageFlash.Instance.Flash();</span>`,
+    warn: "flashImageはCanvasのRaycast Targetをオフにしておかないと、画面クリックを遮断してボタンが押せなくなります。",
+    keywords: [
+      { name:"Color", kind:"class", summary:"RGBAで色を表す構造体",
+        desc:"赤・緑・青・透明度をそれぞれ0〜1の小数で表します。Color.red（赤）・Color.white（白）・Color.clear（透明）などの定数もあります。",
+        syntax:"new Color(1f, 0f, 0f, 0.4f); // 半透明の赤\nColor.red                   // 不透明な赤の定数",
+        note:"255ベースの値を使う場合はColor32(255, 0, 0, 255)を使います。" },
+      { name:"StopAllCoroutines()", kind:"method", summary:"そのオブジェクトで動いているコルーチンをすべて止める",
+        desc:"新しいFlashが来たとき、前のFlashコルーチンが残っていると色がおかしくなります。StartCoroutineの前にStopAllCoroutines()を呼ぶことで常に最新のFlashだけを動かせます。",
+        syntax:"StopAllCoroutines();\nStartCoroutine(FlashRoutine());",
+        note:"特定のコルーチンだけ止めたい場合はStopCoroutine(coroutine)を使います。" },
+    ],
+    related: [21, 6, 37]
+  },
+
+  // ================================================================
+  // 敵AI追加項目 (id: 39〜42)
+  // ================================================================
+
+  {
+    id: 39,
+    icon: "👮",
+    title: "敵を左右にパトロールさせたい",
+    desc: "一定距離を往復して歩き続けるシンプルな敵の動き",
+    cats: ["enemy","action"],
+    genres: ["2daction"],
+    diff: 2,
+    components: ["Transform","SpriteRenderer","Vector2.MoveTowards"],
+    idea: "出発点からの移動距離を計測して折り返す方法と、Transformの2点間をLerpで往復させる方法があります。前者はどこに置いても動くので使いやすいです。",
+    code: `<span class="cm">// EnemyPatrol.cs</span>
+<span class="kw">public class</span> <span class="type">EnemyPatrol</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> speed       = <span class="num">2f</span>;
+    <span class="kw">public float</span> patrolRange = <span class="num">3f</span>; <span class="cm">// 左右に動く距離</span>
+
+    <span class="kw">private</span> <span class="type">Vector2</span>        startPos;
+    <span class="kw">private</span> <span class="kw">float</span>          dir = <span class="num">1f</span>; <span class="cm">// 1=右, -1=左</span>
+    <span class="kw">private</span> <span class="type">SpriteRenderer</span> sr;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        startPos = transform.position;
+        sr = <span class="fn">GetComponent</span>&lt;<span class="type">SpriteRenderer</span>&gt;();
+    }
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        transform.Translate(<span class="type">Vector2</span>.right * dir * speed * <span class="type">Time</span>.deltaTime);
+
+        <span class="cm">// 出発点からの距離が限界を超えたら折り返す</span>
+        <span class="kw">float</span> dist = transform.position.x - startPos.x;
+        <span class="kw">if</span> (dist >  patrolRange) { dir = <span class="num">-1f</span>; sr.flipX = <span class="kw">true</span>;  }
+        <span class="kw">if</span> (dist < -patrolRange) { dir =  <span class="num">1f</span>; sr.flipX = <span class="kw">false</span>; }
+    }
+}`,
+    warn: "Rigidbody2Dを使っている場合はtransform.Translateではなくrb.velocityで動かしましょう。物理演算と座標直接操作が競合してぶれる原因になります。",
+    keywords: [
+      { name:"Transform.Translate()", kind:"method", summary:"現在位置から相対的に移動させる",
+        desc:"引数のVector3/Vector2だけ現在位置から移動します。transform.position += …と同じ意味ですが短く書けます。第2引数でワールド座標基準かローカル座標基準かを選べます。",
+        syntax:"transform.Translate(Vector2.right * speed * Time.deltaTime);",
+        note:"Rigidbody2Dと併用するとめり込みなどの物理バグが起きます。物理オブジェクトはvelocityで動かしましょう。" },
+    ],
+    related: [7, 40, 42]
+  },
+
+  {
+    id: 40,
+    icon: "🔄",
+    title: "壁に当たったら向きを変えさせたい",
+    desc: "パトロール中に壁を検知して自動で折り返す",
+    cats: ["enemy","physics"],
+    genres: ["2daction"],
+    diff: 1,
+    components: ["OnCollisionEnter2D","Raycast","LayerMask"],
+    idea: "OnCollisionEnter2Dで壁タグを検知して向きを反転する方法と、足元前方にRayを飛ばして地面の端を検知する方法があります。後者は崖から落ちない自然な動きになります。",
+    code: `<span class="cm">// EnemyTurn.cs（壁衝突で折り返す方法）</span>
+<span class="kw">public class</span> <span class="type">EnemyTurn</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> speed = <span class="num">2f</span>;
+    <span class="kw">private float</span> dir  = <span class="num">1f</span>;
+    <span class="kw">private</span> <span class="type">SpriteRenderer</span> sr;
+
+    <span class="kw">void</span> <span class="fn">Start</span>() => sr = <span class="fn">GetComponent</span>&lt;<span class="type">SpriteRenderer</span>&gt;();
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        transform.<span class="fn">Translate</span>(<span class="type">Vector2</span>.right * dir * speed * <span class="type">Time</span>.deltaTime);
+
+        <span class="cm">// 前方足元に短いRayを飛ばして地面があるか確認</span>
+        <span class="type">Vector2</span> checkPos = (Vector2)transform.position
+                          + <span class="type">Vector2</span>.right * dir * <span class="num">0.5f</span>
+                          + <span class="type">Vector2</span>.down  * <span class="num">0.6f</span>;
+
+        <span class="kw">bool</span> groundAhead = <span class="type">Physics2D</span>.<span class="fn">OverlapCircle</span>(
+            checkPos, <span class="num">0.1f</span>,
+            <span class="type">LayerMask</span>.<span class="fn">GetMask</span>(<span class="str">"Ground"</span>)
+        );
+
+        <span class="kw">if</span> (!groundAhead) <span class="fn">Flip</span>(); <span class="cm">// 地面がなければ折り返す</span>
+    }
+
+    <span class="kw">void</span> <span class="fn">OnCollisionEnter2D</span>(<span class="type">Collision2D</span> col)
+    {
+        <span class="kw">if</span> (col.gameObject.<span class="fn">CompareTag</span>(<span class="str">"Wall"</span>)) <span class="fn">Flip</span>();
+    }
+
+    <span class="kw">void</span> <span class="fn">Flip</span>()
+    {
+        dir    *= <span class="num">-1f</span>;
+        sr.flipX = dir < <span class="num">0f</span>;
+    }
+}`,
+    warn: "LayerMask.GetMask(\"Ground\")はレイヤー名の文字列で指定します。Inspectorで設定したレイヤー名と一致しているか確認しましょう。",
+    keywords: [
+      { name:"LayerMask.GetMask()", kind:"method", summary:"レイヤー名からLayerMaskを生成する",
+        desc:"文字列のレイヤー名からLayerMask値を生成します。Inspectorで設定するより、コード内で動的にレイヤーを指定したい場合に使います。複数指定もできます。",
+        syntax:`LayerMask mask = LayerMask.GetMask("Ground");
+LayerMask both = LayerMask.GetMask("Ground", "Wall"); // 複数指定`,
+        note:"レイヤー名のtypoに注意。一致しないとLayerMask値が0になり、すべてのレイヤーが対象外になります。" },
+      { name:"Physics2D.OverlapCircle()", kind:"method", summary:"円の範囲内にColliderがあるか調べる",
+        desc:"指定した中心点と半径の円の中にCollider2Dが存在するかを調べます。足元前方に置いて「地面があるか」を確認するのに使います。",
+        syntax:"bool hit = Physics2D.OverlapCircle(position, radius, layerMask);",
+        note:"Gizmosを使ってSceneビューにOverlapCircleの位置を描画するとデバッグが楽になります。" },
+    ],
+    related: [39, 7, 3]
+  },
+
+  {
+    id: 41,
+    icon: "👁️",
+    title: "視野角でプレイヤーを発見させたい",
+    desc: "一定角度・距離の扇形視野にプレイヤーが入ったら追跡開始する",
+    cats: ["enemy","physics"],
+    genres: ["2daction","shooting"],
+    diff: 3,
+    components: ["Vector2.Angle","Physics2D.Raycast","Mathf.Abs"],
+    idea: "プレイヤーへの方向ベクトルと敵の正面ベクトルの角度差を求め、視野角以内ならRaycastで障害物がないか確認します。角度チェック→Raycastの2段階判定が定番です。",
+    code: `<span class="cm">// EnemySight.cs</span>
+<span class="kw">public class</span> <span class="type">EnemySight</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span>     sightRange = <span class="num">6f</span>;    <span class="cm">// 視野距離</span>
+    <span class="kw">public float</span>     sightAngle = <span class="num">60f</span>;   <span class="cm">// 視野角（片側）</span>
+    <span class="kw">public</span> <span class="type">LayerMask</span> obstacleMask;       <span class="cm">// 障害物のレイヤー</span>
+    <span class="kw">public</span> <span class="type">Transform</span> player;
+
+    <span class="kw">private bool</span>     isChasing = <span class="kw">false</span>;
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        isChasing = <span class="fn">CanSeePlayer</span>();
+
+        <span class="kw">if</span> (isChasing)
+        {
+            <span class="cm">// 追跡処理（項目7「敵がプレイヤーを追いかけたい」参照）</span>
+            transform.position = <span class="type">Vector2</span>.<span class="fn">MoveTowards</span>(
+                transform.position, player.position,
+                <span class="num">3f</span> * <span class="type">Time</span>.deltaTime);
+        }
+    }
+
+    <span class="kw">bool</span> <span class="fn">CanSeePlayer</span>()
+    {
+        <span class="type">Vector2</span> toPlayer = (Vector2)player.position - (Vector2)transform.position;
+
+        <span class="cm">// ① 距離チェック</span>
+        <span class="kw">if</span> (toPlayer.magnitude > sightRange) <span class="kw">return false</span>;
+
+        <span class="cm">// ② 角度チェック（敵の正面との角度差）</span>
+        <span class="type">Vector2</span> forward  = transform.right; <span class="cm">// 敵の正面方向</span>
+        <span class="kw">float</span>   angle    = <span class="type">Vector2</span>.<span class="fn">Angle</span>(forward, toPlayer);
+        <span class="kw">if</span> (angle > sightAngle) <span class="kw">return false</span>;
+
+        <span class="cm">// ③ 障害物チェック（Raycastで壁越しに見えないか確認）</span>
+        <span class="type">RaycastHit2D</span> hit = <span class="type">Physics2D</span>.<span class="fn">Raycast</span>(
+            transform.position, toPlayer.normalized,
+            sightRange, obstacleMask);
+
+        <span class="cm">// 障害物に当たっていなければ見えている</span>
+        <span class="kw">return</span> !hit;
+    }
+
+    <span class="cm">// Sceneビューに視野を描画（デバッグ用）</span>
+    <span class="kw">void</span> <span class="fn">OnDrawGizmos</span>()
+    {
+        <span class="type">Gizmos</span>.color = isChasing ? <span class="type">Color</span>.red : <span class="type">Color</span>.yellow;
+        <span class="type">Gizmos</span>.<span class="fn">DrawWireSphere</span>(transform.position, sightRange);
+    }
+}`,
+    warn: "obstacleMaskにプレイヤーのレイヤーも含めてしまうと、Rayがプレイヤー自身に当たって「見えない」と判定されます。障害物専用のレイヤーを別に用意しましょう。",
+    keywords: [
+      { name:"Vector2.Angle()", kind:"method", summary:"2つのベクトルの間の角度を返す",
+        desc:"2つのVector2の間の角度を0〜180度で返します。敵の正面ベクトルとプレイヤーへのベクトルの角度差を求めることで、視野角内かどうかを判定できます。",
+        syntax:"float angle = Vector2.Angle(forward, toPlayer); // 0〜180度",
+        note:"符号付きの角度（-180〜180）が必要な場合はVector2.SignedAngle()を使います。" },
+      { name:"Physics2D.Raycast()", kind:"method", summary:"指定方向に光線を飛ばして最初に当たったColliderを返す",
+        desc:"originから direction方向にdistanceの距離だけ光線を飛ばし、最初に当たったRaycastHit2Dを返します。壁越しに見えないかの判定や、地面までの距離測定などに使います。",
+        syntax:"RaycastHit2D hit = Physics2D.Raycast(origin, direction, distance, layerMask);",
+        note:"何にも当たらなかった場合、hit.colliderはnullになります。" },
+      { name:"Vector2.magnitude", kind:"property", summary:"ベクトルの長さ（距離）を返す",
+        desc:"ベクトルの長さを返します。2点間の距離を求めるときに使います。Vector2.Distance()と同じ計算ですが、差分ベクトルをすでに持っている場合はmagnitudeの方が効率的です。",
+        syntax:"float dist = (playerPos - enemyPos).magnitude;",
+        note:"比較だけなら平方根の計算が省けるsqrMagnitudeを使う方が高速です。" },
+      { name:"OnDrawGizmos()", kind:"lifecycle", summary:"Sceneビューにデバッグ用の図形を描画する",
+        desc:"Unityエディタのシーンビューにのみ描画されます。ビルドには含まれません。敵の視野範囲・攻撃範囲・当たり判定の確認など、見えない数値を視覚化するのに便利です。",
+        syntax:"void OnDrawGizmos() { Gizmos.DrawWireSphere(transform.position, range); }",
+        note:"OnDrawGizmosSelected()にするとオブジェクトを選択したときだけ描画されます。" },
+    ],
+    related: [7, 39, 42]
+  },
+
+  {
+    id: 42,
+    icon: "⚔️",
+    title: "近づいたら攻撃させたい",
+    desc: "一定距離内に入ったら攻撃モーションを出してダメージを与える",
+    cats: ["enemy","action"],
+    genres: ["2daction","shooting"],
+    diff: 2,
+    components: ["Vector2.Distance","Coroutine","OverlapCircle"],
+    idea: "プレイヤーとの距離を毎フレーム監視して攻撃範囲内なら攻撃します。連続攻撃を防ぐためにisAttackingフラグとクールタイムをコルーチンで管理するのがポイントです。",
+    code: `<span class="cm">// EnemyAttack.cs</span>
+<span class="kw">public class</span> <span class="type">EnemyAttack</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span>     attackRange  = <span class="num">1.2f</span>;
+    <span class="kw">public float</span>     attackCooldown = <span class="num">1.5f</span>;
+    <span class="kw">public int</span>       damage       = <span class="num">10</span>;
+    <span class="kw">public</span> <span class="type">LayerMask</span> playerLayer;
+    <span class="kw">private bool</span>     canAttack    = <span class="kw">true</span>;
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="kw">if</span> (!canAttack) <span class="kw">return</span>;
+
+        <span class="cm">// 攻撃範囲内にプレイヤーがいるか確認</span>
+        <span class="type">Collider2D</span> hit = <span class="type">Physics2D</span>.<span class="fn">OverlapCircle</span>(
+            transform.position, attackRange, playerLayer);
+
+        <span class="kw">if</span> (hit != <span class="kw">null</span>)
+        {
+            <span class="fn">StartCoroutine</span>(<span class="fn">AttackRoutine</span>(hit));
+        }
+    }
+
+    <span class="type">IEnumerator</span> <span class="fn">AttackRoutine</span>(<span class="type">Collider2D</span> target)
+    {
+        canAttack = <span class="kw">false</span>;
+
+        <span class="cm">// ダメージを与える</span>
+        <span class="type">PlayerHealth</span> ph = target.<span class="fn">GetComponent</span>&lt;<span class="type">PlayerHealth</span>&gt;();
+        <span class="kw">if</span> (ph != <span class="kw">null</span>) ph.<span class="fn">TakeDamage</span>(damage);
+
+        <span class="cm">// クールタイム</span>
+        <span class="kw">yield return new</span> <span class="type">WaitForSeconds</span>(attackCooldown);
+        canAttack = <span class="kw">true</span>;
+    }
+
+    <span class="cm">// 攻撃範囲をSceneビューに表示</span>
+    <span class="kw">void</span> <span class="fn">OnDrawGizmosSelected</span>()
+    {
+        <span class="type">Gizmos</span>.color = <span class="type">Color</span>.red;
+        <span class="type">Gizmos</span>.<span class="fn">DrawWireSphere</span>(transform.position, attackRange);
+    }
+}`,
+    warn: "playerLayerにプレイヤーのレイヤーを正しく設定しないと、敵自身や他のオブジェクトをターゲットにしてしまいます。Inspectorで必ず確認してください。",
+    keywords: [
+      { name:"Physics2D.OverlapCircle()の戻り値", kind:"method", summary:"範囲内の最初のColliderを返す（なければnull）",
+        desc:"OverlapCircleはbool（当たったか）ではなくCollider2Dを返します。nullチェックで当たり判定をしつつ、そのままGetComponent()でコンポーネントを取得できます。複数ヒットを取得するにはOverlapCircleAll()を使います。",
+        syntax:"Collider2D hit = Physics2D.OverlapCircle(pos, radius, mask);\nif (hit != null) { hit.GetComponent<PlayerHealth>(); }",
+        note:"OverlapCircleAll()はCollider2D[]を返します。範囲内の全オブジェクトに当たり判定したいときに使います。" },
+      { name:"OnDrawGizmosSelected()", kind:"lifecycle", summary:"オブジェクト選択時だけSceneビューに描画する",
+        desc:"OnDrawGizmos()はシーン内の全オブジェクトが常に描画しますが、OnDrawGizmosSelected()は選択中のオブジェクトのみ描画します。攻撃範囲・視野角など個別に確認したいものに向いています。",
+        syntax:"void OnDrawGizmosSelected() { Gizmos.DrawWireSphere(pos, range); }",
+        note:"ビルドには含まれません。エディタ専用のデバッグ機能です。" },
+    ],
+    related: [7, 41, 39]
+  },
+
+  // ================================================================
+  // 音・エフェクト・その他 (id: 43〜48)
+  // ================================================================
+
+  {
+    id: 43,
+    icon: "🎼",
+    title: "BGMをループ再生したい",
+    desc: "ゲーム開始からシーンをまたいで途切れずBGMを流し続ける",
+    cats: ["audio"],
+    genres: ["2daction","shooting","puzzle","runner"],
+    diff: 1,
+    components: ["AudioSource","DontDestroyOnLoad","loop"],
+    idea: "AudioSourceのloopをtrueにするだけで自動ループします。シーンをまたいで再生し続けたい場合はDontDestroyOnLoadと組み合わせます。シングルトンにして重複生成を防ぐのも忘れずに。",
+    code: `<span class="cm">// BGMManager.cs（タイトルシーンの空オブジェクトに付ける）</span>
+<span class="kw">public class</span> <span class="type">BGMManager</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">AudioSource</span> audioSource;
+
+    <span class="kw">public static</span> <span class="type">BGMManager</span> Instance;
+
+    <span class="kw">void</span> <span class="fn">Awake</span>()
+    {
+        <span class="cm">// 既に存在するなら重複を防いで自分を削除</span>
+        <span class="kw">if</span> (Instance != <span class="kw">null</span>)
+        {
+            <span class="type">Destroy</span>(gameObject);
+            <span class="kw">return</span>;
+        }
+        Instance = <span class="kw">this</span>;
+        <span class="type">DontDestroyOnLoad</span>(gameObject);
+
+        audioSource.loop = <span class="kw">true</span>;
+        audioSource.<span class="fn">Play</span>();
+    }
+
+    <span class="kw">public void</span> <span class="fn">ChangeBGM</span>(<span class="type">AudioClip</span> newClip)
+    {
+        audioSource.<span class="fn">Stop</span>();
+        audioSource.clip = newClip;
+        audioSource.<span class="fn">Play</span>();
+    }
+}`,
+    warn: "DontDestroyOnLoadを使うとシーンを戻ったときに同じオブジェクトが2つになります。必ず「既に存在したらDestroyする」重複チェックを入れましょう。",
+    keywords: [
+      { name:"AudioSource.loop", kind:"property", summary:"音声を自動ループ再生する",
+        desc:"trueにすると再生が終わった瞬間に先頭から自動で繰り返します。BGMに使う定番設定です。Inspectorのチェックボックスでも設定できます。",
+        syntax:"audioSource.loop = true;\naudioSource.Play();",
+        note:"PlayOneShot()で再生した音はloopの影響を受けません。ループ音はPlay()で再生しましょう。" },
+      { name:"AudioSource.clip", kind:"property", summary:"再生するAudioClipを切り替える",
+        desc:"再生中のAudioClipを別のものに差し替えます。Stop()してからclipを変えてPlay()するのがBGM切り替えの基本パターンです。",
+        syntax:"audioSource.Stop();\naudioSource.clip = newClip;\naudioSource.Play();",
+        note:"clip変更前にStop()しないと新しいclipが反映されないことがあります。" },
+    ],
+    related: [10, 44, 37]
+  },
+
+  {
+    id: 44,
+    icon: "🔊",
+    title: "音量をスライダーで調整したい",
+    desc: "設定画面でBGM・SE音量をスライダーUIで変更してPlayerPrefsに保存",
+    cats: ["audio","ui","data"],
+    genres: ["2daction","shooting","puzzle","runner"],
+    diff: 2,
+    components: ["AudioMixer","Slider","PlayerPrefs","Mathf.Log10"],
+    idea: "AudioMixerのExposed Parameterに音量を公開して、スライダー値をdB（デシベル）変換して渡します。PlayerPrefsで設定を保存すれば次回起動時に復元できます。",
+    code: `<span class="cm">// VolumeSettings.cs</span>
+<span class="kw">using</span> UnityEngine.Audio;
+<span class="kw">using</span> UnityEngine.UI;
+
+<span class="kw">public class</span> <span class="type">VolumeSettings</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">AudioMixer</span> mixer;
+    <span class="kw">public</span> <span class="type">Slider</span>     bgmSlider;
+    <span class="kw">public</span> <span class="type">Slider</span>     seSlider;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        <span class="cm">// 保存済みの値を読み込んでスライダーに反映</span>
+        bgmSlider.value = <span class="type">PlayerPrefs</span>.<span class="fn">GetFloat</span>(<span class="str">"BGMVolume"</span>, <span class="num">0.8f</span>);
+        seSlider.value  = <span class="type">PlayerPrefs</span>.<span class="fn">GetFloat</span>(<span class="str">"SEVolume"</span>,  <span class="num">0.8f</span>);
+
+        <span class="fn">SetBGMVolume</span>(bgmSlider.value);
+        <span class="fn">SetSEVolume</span>(seSlider.value);
+
+        <span class="cm">// スライダー変更イベントを登録</span>
+        bgmSlider.onValueChanged.<span class="fn">AddListener</span>(<span class="fn">SetBGMVolume</span>);
+        seSlider.onValueChanged.<span class="fn">AddListener</span>(<span class="fn">SetSEVolume</span>);
+    }
+
+    <span class="kw">public void</span> <span class="fn">SetBGMVolume</span>(<span class="kw">float</span> value)
+    {
+        <span class="cm">// 0〜1の値をdBに変換（AudioMixerはdBで管理）</span>
+        <span class="kw">float</span> db = <span class="type">Mathf</span>.<span class="fn">Log10</span>(<span class="type">Mathf</span>.<span class="fn">Max</span>(value, <span class="num">0.0001f</span>)) * <span class="num">20f</span>;
+        mixer.<span class="fn">SetFloat</span>(<span class="str">"BGMVolume"</span>, db);
+        <span class="type">PlayerPrefs</span>.<span class="fn">SetFloat</span>(<span class="str">"BGMVolume"</span>, value);
+    }
+
+    <span class="kw">public void</span> <span class="fn">SetSEVolume</span>(<span class="kw">float</span> value)
+    {
+        <span class="kw">float</span> db = <span class="type">Mathf</span>.<span class="fn">Log10</span>(<span class="type">Mathf</span>.<span class="fn">Max</span>(value, <span class="num">0.0001f</span>)) * <span class="num">20f</span>;
+        mixer.<span class="fn">SetFloat</span>(<span class="str">"SEVolume"</span>, db);
+        <span class="type">PlayerPrefs</span>.<span class="fn">SetFloat</span>(<span class="str">"SEVolume"</span>, value);
+    }
+}`,
+    warn: "AudioMixerのパラメータ名（\"BGMVolume\"など）はExpose Parameter時に設定した名前と完全一致が必要です。AudioMixerウィンドウで右クリック→Expose Parameter→名前を確認してください。",
+    keywords: [
+      { name:"AudioMixer", kind:"class", summary:"複数の音声をグループ管理してエフェクトや音量を一括制御する",
+        desc:"BGM・SE・ボイスなどを別グループにして、グループごとに音量やエフェクトを管理できます。Project右クリック→Create→Audio Mixerで作成します。",
+        syntax:"mixer.SetFloat(\"BGMVolume\", dbValue);",
+        note:"AudioSourceのOutputにAudioMixerGroupを設定することで、その音源がMixerの管理下に入ります。" },
+      { name:"Slider.onValueChanged", kind:"event", summary:"スライダーの値が変わったときに呼ぶ関数を登録する",
+        desc:"AddListener()でスライダー値変更イベントにメソッドを登録します。float引数を1つ受け取るメソッドを渡すと、変更後の値が自動で渡されます。",
+        syntax:"slider.onValueChanged.AddListener(SetBGMVolume);",
+        note:"InspectorのOn Value Changedに登録してもOKですが、コードからAddListenerする方法は動的に変更でき柔軟です。" },
+      { name:"Mathf.Log10()", kind:"method", summary:"常用対数を計算する",
+        desc:"人間の聴覚は音量を対数的に感じるため、AudioMixerはdB（デシベル）単位で管理します。スライダーの0〜1の線形値をdBに変換するにはLog10を使います。value=0のときLog10が-∞になるのでMathf.Max(value, 0.0001f)で下限を設けます。",
+        syntax:"float db = Mathf.Log10(Mathf.Max(value, 0.0001f)) * 20f;",
+        note:"この計算でvalue=1のときdb=0（最大）、value=0.1のときdb=-20となります。" },
+    ],
+    related: [43, 10, 11]
+  },
+
+  {
+    id: 45,
+    icon: "🌵",
+    title: "障害物をランダムに生成したい",
+    desc: "ランゲームで右から流れてくる障害物を一定間隔でスポーンする",
+    cats: ["action","enemy"],
+    genres: ["runner"],
+    diff: 2,
+    components: ["Instantiate","Random.Range","Destroy"],
+    idea: "画面右端より外にスポーンして左へ移動させます。画面左端を越えたらDestroyします。Y座標をRandomにすることでバリエーションを出せます。",
+    code: `<span class="cm">// ObstacleSpawner.cs</span>
+<span class="kw">public class</span> <span class="type">ObstacleSpawner</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">GameObject</span>[] obstaclePrefabs; <span class="cm">// 複数種類の障害物</span>
+    <span class="kw">public float</span> spawnInterval = <span class="num">2f</span>;
+    <span class="kw">public float</span> spawnX        = <span class="num">10f</span>;   <span class="cm">// 画面右端より外</span>
+    <span class="kw">public float</span> yMin          = <span class="num">-2f</span>;
+    <span class="kw">public float</span> yMax          = <span class="num"> 2f</span>;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        <span class="fn">InvokeRepeating</span>(<span class="str">"SpawnObstacle"</span>, <span class="num">1f</span>, spawnInterval);
+    }
+
+    <span class="kw">void</span> <span class="fn">SpawnObstacle</span>()
+    {
+        <span class="cm">// ランダムな種類・高さで生成</span>
+        <span class="kw">int</span>     idx = <span class="type">Random</span>.<span class="fn">Range</span>(<span class="num">0</span>, obstaclePrefabs.Length);
+        <span class="kw">float</span>   y   = <span class="type">Random</span>.<span class="fn">Range</span>(yMin, yMax);
+        <span class="type">Vector3</span> pos = <span class="kw">new</span> <span class="type">Vector3</span>(spawnX, y, <span class="num">0f</span>);
+
+        <span class="type">Instantiate</span>(obstaclePrefabs[idx], pos, <span class="type">Quaternion</span>.identity);
+    }
+}
+
+<span class="cm">// Obstacle.cs（障害物自身に付ける）</span>
+<span class="kw">public class</span> <span class="type">Obstacle</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> speed   = <span class="num">5f</span>;
+    <span class="kw">public float</span> destroyX = <span class="num">-12f</span>; <span class="cm">// 画面外に出たら削除</span>
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        transform.<span class="fn">Translate</span>(<span class="type">Vector2</span>.left * speed * <span class="type">Time</span>.deltaTime);
+        <span class="kw">if</span> (transform.position.x < destroyX) <span class="type">Destroy</span>(gameObject);
+    }
+}`,
+    warn: "spawnIntervalを短くするほど障害物が増えてメモリを圧迫します。スコアに応じて徐々に短くする場合はObject Poolingも検討してください。",
+    keywords: [
+      { name:"配列の添字アクセス", kind:"class", summary:"配列の要素をインデックスで取得する",
+        desc:"obstaclePrefabs[idx]のようにインデックスで要素を取得します。Random.Rangeと組み合わせてランダムな要素を選ぶのは定番パターンです。インデックスは0から始まります。",
+        syntax:"int idx = Random.Range(0, array.Length); // 0〜Length-1\nvar item = array[idx];",
+        note:"インデックスがLength以上だとIndexOutOfRangeExceptionが発生します。Random.Range(0, array.Length)のint版は上限が除外されるので安全です。" },
+    ],
+    related: [22, 46, 12]
+  },
+
+  {
+    id: 46,
+    icon: "⚡",
+    title: "スコアに応じてゲームスピードを上げたい",
+    desc: "スコアが増えるほど敵の速度・スポーン間隔が上がる難易度曲線",
+    cats: ["action","data"],
+    genres: ["runner","shooting"],
+    diff: 2,
+    components: ["Mathf.Clamp","Time.timeScale","AnimationCurve"],
+    idea: "スコアに比例して速度を上げる方法と、AnimationCurveでデザイナーが難易度曲線を調整できる方法があります。後者はInspectorで視覚的に調整できて便利です。",
+    code: `<span class="cm">// DifficultyManager.cs</span>
+<span class="kw">public class</span> <span class="type">DifficultyManager</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">AnimationCurve</span> speedCurve;    <span class="cm">// Inspectorで曲線を編集</span>
+    <span class="kw">public float</span>          maxScore = <span class="num">1000f</span>;
+
+    <span class="kw">public static</span> <span class="type">DifficultyManager</span> Instance;
+    <span class="kw">void</span> <span class="fn">Awake</span>() => Instance = <span class="kw">this</span>;
+
+    <span class="cm">// スコアを0〜1に正規化して速度倍率を返す</span>
+    <span class="kw">public float</span> <span class="fn">GetSpeedMultiplier</span>(<span class="kw">int</span> score)
+    {
+        <span class="kw">float</span> t = <span class="type">Mathf</span>.<span class="fn">Clamp01</span>((float)score / maxScore);
+        <span class="kw">return</span> speedCurve.<span class="fn">Evaluate</span>(t);
+    }
+}
+
+<span class="cm">// 障害物側での使い方</span>
+<span class="cm">// float mult = DifficultyManager.Instance.GetSpeedMultiplier(score);</span>
+<span class="cm">// speed = baseSpeed * mult;</span>
+
+<span class="cm">// ── シンプル版（AnimationCurveなし）──</span>
+<span class="kw">public class</span> <span class="type">SimpleDifficulty</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> baseSpeed   = <span class="num">3f</span>;
+    <span class="kw">public float</span> speedPerScore = <span class="num">0.01f</span>; <span class="cm">// スコア1あたりの速度増加</span>
+    <span class="kw">public float</span> maxSpeed    = <span class="num">10f</span>;
+
+    <span class="kw">public float</span> <span class="fn">GetSpeed</span>(<span class="kw">int</span> score)
+    {
+        <span class="kw">return</span> <span class="type">Mathf</span>.<span class="fn">Clamp</span>(
+            baseSpeed + score * speedPerScore,
+            baseSpeed, maxSpeed);
+    }
+}`,
+    warn: "Time.timeScaleでゲーム全体を加速する方法もありますが、UIアニメーションや音声も影響を受けます。個別オブジェクトの速度を上げる方が制御しやすいです。",
+    keywords: [
+      { name:"AnimationCurve", kind:"class", summary:"Inspector上でグラフ編集できる数値曲線",
+        desc:"0〜1の入力に対して任意の出力値を返す曲線をInspectorのグラフUIで視覚的に編集できます。Evaluate(t)で指定したtの値を取得します。難易度曲線・フェード曲線など「なめらかな変化」の設計に便利です。",
+        syntax:"public AnimationCurve speedCurve;\nfloat value = speedCurve.Evaluate(t); // t: 0〜1",
+        note:"AnimationCurve.EaseInOut()などで定番の曲線を簡単に作ることもできます。" },
+      { name:"キャスト（型変換）", kind:"class", summary:"整数をfloatに変換して割り算を正確に行う",
+        desc:"C#では整数同士の割り算は整数になります。(float)score / maxScoreのように片方をfloatにキャストすることで小数の割り算になります。",
+        syntax:"float t = (float)score / maxScore; // 0.0〜1.0になる\n// score / maxScore だと 0 か 1 になってしまう",
+        note:"maxScoreをfloatで宣言しておけばキャスト不要です。どちらか片方がfloatなら自動的に浮動小数点演算になります。" },
+    ],
+    related: [45, 11, 22]
+  },
+
+  {
+    id: 47,
+    icon: "✨",
+    title: "オブジェクトを点滅させたい",
+    desc: "無敵中・特殊状態の演出としてスプライトを点滅させる",
+    cats: ["action","audio"],
+    genres: ["2daction","shooting"],
+    diff: 1,
+    components: ["SpriteRenderer","Coroutine","Color.Lerp"],
+    idea: "SpriteRenderer.enabledをON/OFFする方法と、Color.aをLerpで変化させる方法があります。前者はパキッとした点滅、後者はフワッとした点滅になります。",
+    code: `<span class="cm">// Blink.cs</span>
+<span class="kw">public class</span> <span class="type">Blink</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">private</span> <span class="type">SpriteRenderer</span> sr;
+
+    <span class="kw">void</span> <span class="fn">Start</span>() => sr = <span class="fn">GetComponent</span>&lt;<span class="type">SpriteRenderer</span>&gt;();
+
+    <span class="cm">// ── パターン1: パキッと点滅（無敵時間などに）──</span>
+    <span class="kw">public</span> <span class="type">IEnumerator</span> <span class="fn">BlinkFlash</span>(<span class="kw">float</span> duration, <span class="kw">float</span> interval = <span class="num">0.1f</span>)
+    {
+        <span class="kw">for</span> (<span class="kw">float</span> t = <span class="num">0</span>; t < duration; t += interval)
+        {
+            sr.enabled = !sr.enabled;
+            <span class="kw">yield return new</span> <span class="type">WaitForSeconds</span>(interval);
+        }
+        sr.enabled = <span class="kw">true</span>; <span class="cm">// 必ず表示状態に戻す</span>
+    }
+
+    <span class="cm">// ── パターン2: フワッと点滅（アイテムなどに）──</span>
+    <span class="kw">public</span> <span class="type">IEnumerator</span> <span class="fn">BlinkGlow</span>(<span class="kw">float</span> speed = <span class="num">3f</span>)
+    {
+        <span class="kw">while</span> (<span class="kw">true</span>)
+        {
+            <span class="cm">// Mathf.PingPongで0→1→0を繰り返す</span>
+            <span class="kw">float</span> alpha = <span class="type">Mathf</span>.<span class="fn">PingPong</span>(<span class="type">Time</span>.time * speed, <span class="num">1f</span>);
+            <span class="type">Color</span> c = sr.color;
+            c.a = alpha;
+            sr.color = c;
+            <span class="kw">yield return null</span>;
+        }
+    }
+}
+
+<span class="cm">// 使い方</span>
+<span class="cm">// StartCoroutine(blink.BlinkFlash(2f));       // 2秒間パキッと点滅</span>
+<span class="cm">// StartCoroutine(blink.BlinkGlow());           // フワッと永続点滅</span>`,
+    warn: "BlinkFlashはsrを最後にtrue（表示）に戻さないと、消えたままになります。コルーチン終了時のsr.enabled = trueを忘れないようにしましょう。",
+    keywords: [
+      { name:"Mathf.PingPong()", kind:"method", summary:"0〜lengthを往復する値を返す",
+        desc:"Time.timeを渡すと時間とともに0→length→0→…と往復する値を返します。サイン波のように滑らかではなく線形に変化します。alpha値の往復などアニメーションに便利です。",
+        syntax:"float alpha = Mathf.PingPong(Time.time * speed, 1f); // 0〜1を往復",
+        note:"Mathf.Sin(Time.time)を使うとよりなめらかな往復になります（-1〜1なので0.5fかけて+0.5fで0〜1に変換）。" },
+      { name:"Color.a", kind:"property", summary:"色の透明度（アルファ値）を取得・設定する",
+        desc:"0が完全透明、1が完全不透明です。Color構造体はイミュータブルなので、sr.color.a = 0.5fとは書けません。一度Color変数に代入して.aを変えてからsr.colorに戻す必要があります。",
+        syntax:"Color c = sr.color;\nc.a = 0.5f;\nsr.color = c;",
+        note:"sr.color.a = 0.5fと直接書くとコンパイルエラーになります。必ず一時変数を使いましょう。" },
+    ],
+    related: [21, 38, 15]
+  },
+
+  {
+    id: 48,
+    icon: "🔗",
+    title: "シーンをまたいでデータを引き継ぎたい",
+    desc: "DontDestroyOnLoadまたはstaticでスコア・設定をシーン間で保持する",
+    cats: ["data","scene"],
+    genres: ["2daction","shooting","puzzle","runner"],
+    diff: 2,
+    components: ["DontDestroyOnLoad","static","PlayerPrefs"],
+    idea: "一時的なデータ（現在のスコアなど）はDontDestroyOnLoadかstaticで渡します。永続データ（ハイスコア・設定）はPlayerPrefsに保存します。用途に応じて使い分けが大切です。",
+    code: `<span class="cm">// ── 方法1: DontDestroyOnLoad ──</span>
+<span class="cm">// GameData.cs（管理オブジェクトに付ける）</span>
+<span class="kw">public class</span> <span class="type">GameData</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public static</span> <span class="type">GameData</span> Instance;
+
+    <span class="kw">public int</span>    score      = <span class="num">0</span>;
+    <span class="kw">public int</span>    lives      = <span class="num">3</span>;
+    <span class="kw">public string</span> playerName = <span class="str">""</span>;
+
+    <span class="kw">void</span> <span class="fn">Awake</span>()
+    {
+        <span class="kw">if</span> (Instance != <span class="kw">null</span>) { <span class="type">Destroy</span>(gameObject); <span class="kw">return</span>; }
+        Instance = <span class="kw">this</span>;
+        <span class="type">DontDestroyOnLoad</span>(gameObject);
+    }
+}
+
+<span class="cm">// 別シーンから参照: GameData.Instance.score</span>
+
+
+<span class="cm">// ── 方法2: staticクラス（最もシンプル）──</span>
+<span class="kw">public static class</span> <span class="type">SessionData</span>
+{
+    <span class="kw">public static int</span>    score      = <span class="num">0</span>;
+    <span class="kw">public static int</span>    lives      = <span class="num">3</span>;
+    <span class="kw">public static string</span> playerName = <span class="str">""</span>;
+
+    <span class="cm">// ゲーム開始時にリセット</span>
+    <span class="kw">public static void</span> <span class="fn">Reset</span>()
+    {
+        score = <span class="num">0</span>; lives = <span class="num">3</span>; playerName = <span class="str">""</span>;
+    }
+}
+
+<span class="cm">// 別シーンから参照: SessionData.score</span>
+<span class="cm">// シーン開始時にリセット: SessionData.Reset()</span>`,
+    warn: "staticクラスの変数はアプリ終了まで消えません。ゲームリスタート時にReset()を呼ぶ処理を忘れると前回のスコアが残ったままになります。",
+    keywords: [
+      { name:"DontDestroyOnLoad()", kind:"method", summary:"シーン遷移後もGameObjectを保持する",
+        desc:"このメソッドを呼んだGameObjectはシーンをまたいで存在し続けます。BGM・データ管理・フェードパネルなど継続が必要なものに使います。シングルトンと組み合わせて重複生成を防ぐのがセットです。",
+        syntax:"DontDestroyOnLoad(this.gameObject);",
+        note:"シーン遷移で消えないのは便利ですが、増えすぎると管理が難しくなります。本当に必要なものだけに使いましょう。" },
+      { name:"staticクラス", kind:"class", summary:"インスタンス化できないクラス。グローバルなデータ保管に使う",
+        desc:"static classはnewできません。クラス名.変数名でどこからでもアクセスでき、シーン遷移後も値が保持されます。MonoBehaviourを継承しないので軽量です。GameObjectが不要な純粋なデータ保管に向いています。",
+        syntax:"public static class SessionData { public static int score = 0; }",
+        note:"staticクラスはInspectorに表示できません。デバッグはDebug.Logで行います。" },
+    ],
+    related: [11, 37, 43]
   }
 ];
 
 
 const GENRE_TAGS = {
-  "2daction":  { label:"2Dアクション", ids:[1,2,3,4,5,6,7,8,9,10,14,15,16,17,18,19,20,21,26,28,29,31] },
-  "shooting":  { label:"シューティング", ids:[1,9,10,11,13,22,23,24,25,26] },
-  "puzzle":    { label:"パズル", ids:[5,10,13,27,28,29,30,31] },
-  "runner":    { label:"ランゲーム", ids:[2,10,11,12,13,20,22] }
+  "2daction":  { label:"2Dアクション", ids:[1,2,3,4,5,6,7,8,9,10,14,15,16,17,18,19,20,21,26,28,29,31,32,33,34,35,36,37,38,39,40,41,42,43,44,47,48] },
+  "shooting":  { label:"シューティング", ids:[1,9,10,11,13,22,23,24,25,26,32,33,34,36,37,38,41,42,43,44,46,47,48] },
+  "puzzle":    { label:"パズル", ids:[5,10,13,27,28,29,30,31,33,34,35,37,43,44,48] },
+  "runner":    { label:"ランゲーム", ids:[2,10,11,12,13,20,22,32,33,34,37,43,44,45,46,48] }
 };
