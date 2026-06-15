@@ -2695,6 +2695,777 @@ LayerMask both = LayerMask.GetMask("Ground", "Wall"); // 複数指定`,
         note:"staticクラスはInspectorに表示できません。デバッグはDebug.Logで行います。" },
     ],
     related: [11, 37, 43]
+  },
+
+  // ================================================================
+  // 3Dアクション項目 (id: 49〜61)
+  // ================================================================
+
+  {
+    id: 49,
+    icon: "🕹️",
+    title: "3Dで前後左右に移動させたい",
+    desc: "WASDキーで3D空間をXZ平面上に移動する基本実装",
+    cats: ["action","input"],
+    genres: ["3daction"],
+    diff: 1,
+    components: ["Rigidbody","CharacterController","Input.GetAxis"],
+    idea: "3D移動はXZ平面で行います。Rigidbody版とCharacterController版があり、物理挙動が必要ならRigidbody、シンプルな移動ならCharacterControllerが向いています。",
+    code: `<span class="cm">// PlayerMove3D.cs（Rigidbody版）</span>
+<span class="kw">public class</span> <span class="type">PlayerMove3D</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> speed = <span class="num">5f</span>;
+    <span class="kw">private</span> <span class="type">Rigidbody</span> rb;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        rb = <span class="fn">GetComponent</span>&lt;<span class="type">Rigidbody</span>&gt;();
+        <span class="cm">// 物理で倒れないよう回転を固定</span>
+        rb.freezeRotation = <span class="kw">true</span>;
+    }
+
+    <span class="kw">void</span> <span class="fn">FixedUpdate</span>()
+    {
+        <span class="kw">float</span> h = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Horizontal"</span>); <span class="cm">// A/D</span>
+        <span class="kw">float</span> v = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Vertical"</span>);   <span class="cm">// W/S</span>
+
+        <span class="type">Vector3</span> move = <span class="kw">new</span> <span class="type">Vector3</span>(h, <span class="num">0f</span>, v) * speed;
+        rb.velocity = <span class="kw">new</span> <span class="type">Vector3</span>(move.x, rb.velocity.y, move.z);
+    }
+}`,
+    warn: "rb.freezeRotation = trueを忘れると、衝突時にキャラが物理で倒れます。3D移動では必須の設定です。",
+    keywords: [
+      { name:"Rigidbody", kind:"class", summary:"3D物理演算を担うコンポーネント（2DはRigidbody2D）",
+        desc:"3Dの物理挙動（重力・衝突・力）を管理します。velocity・AddForce・MovePositionなどで動かします。2DのRigidbody2Dと使い方はほぼ同じですが、3D空間（Vector3）を使います。",
+        syntax:"Rigidbody rb = GetComponent<Rigidbody>();\nrb.velocity = new Vector3(x, rb.velocity.y, z);",
+        note:"FixedUpdate()内で操作するのが基本です。Update()では物理の更新タイミングとズレます。" },
+      { name:"Rigidbody.freezeRotation", kind:"property", summary:"物理による回転を固定する",
+        desc:"trueにすると物理演算による回転を無効にします。キャラクターが衝突で倒れるのを防ぎます。Inspectorの「Constraints > Freeze Rotation」と同じ設定です。",
+        syntax:"rb.freezeRotation = true;",
+        note:"特定軸だけ固定したい場合はrb.constraints = RigidbodyConstraints.FreezeRotationXを使います。" },
+    ],
+    related: [50, 51, 52]
+  },
+
+  {
+    id: 50,
+    icon: "🧭",
+    title: "カメラの向きに合わせて移動させたい",
+    desc: "カメラが向いている方向を前として移動する三人称操作の基本",
+    cats: ["action","input"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["Camera.main","Transform.forward","Vector3"],
+    idea: "カメラのforwardとrightをXZ平面に投影して移動方向を求めます。これによりカメラを回しても「前」の方向が変わり、直感的な操作になります。",
+    code: `<span class="cm">// CameraRelativeMove.cs</span>
+<span class="kw">public class</span> <span class="type">CameraRelativeMove</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> speed = <span class="num">5f</span>;
+    <span class="kw">private</span> <span class="type">Rigidbody</span> rb;
+    <span class="kw">private</span> <span class="type">Transform</span> cam;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        rb  = <span class="fn">GetComponent</span>&lt;<span class="type">Rigidbody</span>&gt;();
+        rb.freezeRotation = <span class="kw">true</span>;
+        cam = <span class="type">Camera</span>.main.transform;
+    }
+
+    <span class="kw">void</span> <span class="fn">FixedUpdate</span>()
+    {
+        <span class="kw">float</span> h = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Horizontal"</span>);
+        <span class="kw">float</span> v = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Vertical"</span>);
+
+        <span class="cm">// カメラの前後左右をXZ平面に投影</span>
+        <span class="type">Vector3</span> forward = <span class="type">Vector3</span>.<span class="fn">ProjectOnPlane</span>(cam.forward, <span class="type">Vector3</span>.up).normalized;
+        <span class="type">Vector3</span> right   = <span class="type">Vector3</span>.<span class="fn">ProjectOnPlane</span>(cam.right,   <span class="type">Vector3</span>.up).normalized;
+
+        <span class="type">Vector3</span> move = (forward * v + right * h) * speed;
+        rb.velocity = <span class="kw">new</span> <span class="type">Vector3</span>(move.x, rb.velocity.y, move.z);
+    }
+}`,
+    warn: "カメラが真下や真上を向いているとforward.normalizedがゼロになります。通常のゲームでは問題になりませんが、カメラ角度に制限を設けておくと安全です。",
+    keywords: [
+      { name:"Vector3.ProjectOnPlane()", kind:"method", summary:"ベクトルを平面に投影する",
+        desc:"ベクトルを指定した法線の平面に投影します。カメラのforwardをXZ平面（法線=Vector3.up）に投影することで、カメラが上下に傾いていても水平方向の成分だけ取り出せます。",
+        syntax:"Vector3 flat = Vector3.ProjectOnPlane(cam.forward, Vector3.up).normalized;",
+        note:"投影後にnormalizedを忘れると斜め向きで大きさが変わり速度が変化します。" },
+      { name:"Transform.forward", kind:"property", summary:"オブジェクトが向いているZ軸方向の単位ベクトル",
+        desc:"オブジェクトのローカルZ軸をワールド座標に変換したものです。カメラの前方向・キャラの正面方向の取得に使います。transform.right（X軸）・transform.up（Y軸）も同様に使えます。",
+        syntax:"Vector3 dir = transform.forward; // 前向きの単位ベクトル",
+        note:"Quaternion.LookRotation(transform.forward)で向きをQuaternionに変換できます。" },
+    ],
+    related: [49, 53, 54]
+  },
+
+  {
+    id: 51,
+    icon: "⬆️",
+    title: "3Dでジャンプさせたい",
+    desc: "地面判定つき3Dジャンプ。SphereCastで接地を検知する",
+    cats: ["action","physics"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["Rigidbody","Physics.CheckSphere","LayerMask"],
+    idea: "2Dと同様に接地判定が必要です。3DではPhysics.CheckSphere（3D版のOverlapCircle）で足元の地面を検知します。ジャンプ力はAddForceのImpulseモードで与えると自然です。",
+    code: `<span class="cm">// PlayerJump3D.cs</span>
+<span class="kw">public class</span> <span class="type">PlayerJump3D</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span>     jumpForce   = <span class="num">5f</span>;
+    <span class="kw">public</span> <span class="type">Transform</span> groundCheck;  <span class="cm">// 足元の空オブジェクト</span>
+    <span class="kw">public float</span>     checkRadius = <span class="num">0.2f</span>;
+    <span class="kw">public</span> <span class="type">LayerMask</span> groundMask;
+    <span class="kw">private</span> <span class="type">Rigidbody</span> rb;
+    <span class="kw">private bool</span>     isGrounded;
+
+    <span class="kw">void</span> <span class="fn">Start</span>() => rb = <span class="fn">GetComponent</span>&lt;<span class="type">Rigidbody</span>&gt;();
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="cm">// 足元の球で接地チェック</span>
+        isGrounded = <span class="type">Physics</span>.<span class="fn">CheckSphere</span>(
+            groundCheck.position, checkRadius, groundMask);
+
+        <span class="kw">if</span> (<span class="type">Input</span>.<span class="fn">GetKeyDown</span>(<span class="type">KeyCode</span>.Space) && isGrounded)
+        {
+            <span class="cm">// 瞬間的な力でジャンプ</span>
+            rb.velocity = <span class="kw">new</span> <span class="type">Vector3</span>(rb.velocity.x, <span class="num">0f</span>, rb.velocity.z);
+            rb.<span class="fn">AddForce</span>(<span class="type">Vector3</span>.up * jumpForce, <span class="type">ForceMode</span>.Impulse);
+        }
+    }
+}`,
+    warn: "groundCheckの空オブジェクトをキャラの足元（少し下）に配置してください。キャラ本体の中心に置くと常にtrueになり空中でもジャンプできてしまいます。",
+    keywords: [
+      { name:"Physics.CheckSphere()", kind:"method", summary:"3D空間の球形範囲内にColliderがあるか調べる",
+        desc:"2DのPhysics2D.OverlapCircle()の3D版です。中心座標・半径・LayerMaskを指定して、その球の中にColliderが存在するかをboolで返します。",
+        syntax:"bool grounded = Physics.CheckSphere(groundCheck.position, 0.2f, groundMask);",
+        note:"Gizmos.DrawWireSphere()でSceneビューに可視化するとデバッグが楽です。" },
+      { name:"Rigidbody.AddForce()", kind:"method", summary:"Rigidbodyに力を加える",
+        desc:"第1引数に力の方向と大きさ（Vector3）、第2引数にForceModeを指定します。ForceMode.Impulseは瞬間的な力（ジャンプ向き）、ForceMode.Forceは継続的な力（推進力向き）です。",
+        syntax:"rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);",
+        note:"ジャンプ前にvelocity.yを0にリセットすると、上昇中に再ジャンプしても跳び上がりすぎません。" },
+      { name:"ForceMode", kind:"class", summary:"AddForceの力の加え方を指定する列挙型",
+        desc:"Force（継続的な力）・Impulse（瞬間的な力、質量考慮）・VelocityChange（瞬間的な速度変化、質量無視）・Acceleration（継続的な加速度、質量無視）の4種類があります。",
+        syntax:"rb.AddForce(dir * power, ForceMode.Impulse);",
+        note:"ジャンプにはImpulse、移動にはForceまたはvelocity直接代入が一般的です。" },
+    ],
+    related: [49, 55, 50]
+  },
+
+  {
+    id: 52,
+    icon: "🔃",
+    title: "キャラを移動方向に向かせたい",
+    desc: "移動方向に合わせてキャラクターがスムーズに回転する",
+    cats: ["action"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["Quaternion.LookRotation","Quaternion.Slerp","Vector3"],
+    idea: "移動方向のベクトルからLookRotationで目標回転を作り、Slerpで現在の回転から徐々に近づけます。これで急に向きが変わらないスムーズな回転になります。",
+    code: `<span class="cm">// PlayerRotate3D.cs</span>
+<span class="kw">public class</span> <span class="type">PlayerRotate3D</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> rotateSpeed = <span class="num">10f</span>;
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="kw">float</span> h = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Horizontal"</span>);
+        <span class="kw">float</span> v = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Vertical"</span>);
+
+        <span class="type">Vector3</span> dir = <span class="kw">new</span> <span class="type">Vector3</span>(h, <span class="num">0f</span>, v);
+
+        <span class="cm">// 移動入力がある場合のみ回転</span>
+        <span class="kw">if</span> (dir.magnitude >= <span class="num">0.1f</span>)
+        {
+            <span class="cm">// 移動方向を向くQuaternionを計算</span>
+            <span class="type">Quaternion</span> targetRot = <span class="type">Quaternion</span>.<span class="fn">LookRotation</span>(dir);
+
+            <span class="cm">// 現在の回転から目標回転へ滑らかに補間</span>
+            transform.rotation = <span class="type">Quaternion</span>.<span class="fn">Slerp</span>(
+                transform.rotation,
+                targetRot,
+                rotateSpeed * <span class="type">Time</span>.deltaTime
+            );
+        }
+    }
+}`,
+    warn: "dirがVector3.zeroのときLookRotationはエラーになります。magnitude >= 0.1fの条件チェックで入力がないときは回転処理をスキップしましょう。",
+    keywords: [
+      { name:"Quaternion.LookRotation()", kind:"method", summary:"指定した方向を向くQuaternionを返す",
+        desc:"引数のVector3方向を正面（Z軸）として向くQuaternionを生成します。移動方向・敵の方向・カメラの方向などを渡すことで、その方向を向く回転を簡単に作れます。",
+        syntax:"Quaternion rot = Quaternion.LookRotation(direction);",
+        note:"第2引数にupwardを指定できます。省略するとVector3.upが使われます。" },
+      { name:"Quaternion.Slerp()", kind:"method", summary:"2つのQuaternion間を球面補間する",
+        desc:"Vector3.Lerpの回転版です。aからbへ、tの割合で球面補間した回転を返します。毎フレームtにTime.deltaTimeを掛けることで滑らかな回転アニメーションになります。",
+        syntax:"transform.rotation = Quaternion.Slerp(from, to, speed * Time.deltaTime);",
+        note:"Quaternion.Lerp()より計算が正確ですが、速度が遅い場合の差は小さいです。" },
+      { name:"Quaternion", kind:"class", summary:"3D回転を表す4次元の数値型",
+        desc:"3Dの回転を表す型です。直接数値を扱うのは難しいので、LookRotation・Euler・Slerpなどのメソッドを使って操作するのが基本です。transform.rotationはQuaternion型です。",
+        syntax:"transform.rotation = Quaternion.Euler(0f, 90f, 0f); // Y軸90度回転",
+        note:"オイラー角（X/Y/Z度数）への変換はtransform.eulerAnglesで取得できます。" },
+    ],
+    related: [49, 50, 53]
+  },
+
+  {
+    id: 53,
+    icon: "🎥",
+    title: "三人称視点カメラを作りたい",
+    desc: "プレイヤーの後ろからついてくるカメラ。Cinemachineも紹介",
+    cats: ["action"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["LateUpdate","Vector3.Lerp","Cinemachine"],
+    idea: "カメラをプレイヤーからoffset分だけ離した位置に置き、LateUpdate()で追従させます。実際のゲームではCinemachineパッケージを使うと壁抜けや衝突回避も自動で処理してくれます。",
+    code: `<span class="cm">// ThirdPersonCamera.cs（Cameraオブジェクトに付ける）</span>
+<span class="kw">public class</span> <span class="type">ThirdPersonCamera</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">Transform</span> target;                          <span class="cm">// プレイヤー</span>
+    <span class="kw">public</span> <span class="type">Vector3</span>   offset  = <span class="kw">new</span> <span class="type">Vector3</span>(<span class="num">0</span>, <span class="num">3</span>, <span class="num">-6</span>); <span class="cm">// 後ろ上から</span>
+    <span class="kw">public float</span>    smooth  = <span class="num">5f</span>;
+
+    <span class="kw">void</span> <span class="fn">LateUpdate</span>()
+    {
+        <span class="cm">// プレイヤーの向きに合わせてオフセットを回転させる</span>
+        <span class="type">Vector3</span> targetPos = target.position
+                           + target.rotation * offset;
+
+        transform.position = <span class="type">Vector3</span>.<span class="fn">Lerp</span>(
+            transform.position, targetPos, smooth * <span class="type">Time</span>.deltaTime);
+
+        <span class="cm">// 常にプレイヤーを見続ける</span>
+        transform.<span class="fn">LookAt</span>(target.position + <span class="type">Vector3</span>.up * <span class="num">1f</span>);
+    }
+}`,
+    warn: "壁の中にカメラが入り込む問題はこのコードでは解決しません。本格的に対処するにはCinemachineのCinemachineColliderコンポーネントを使いましょう。",
+    keywords: [
+      { name:"Transform.LookAt()", kind:"method", summary:"指定したターゲットの方向を向く",
+        desc:"引数のTransformまたはVector3の方向にオブジェクトのZ軸を向けます。カメラが常にプレイヤーを見続ける・砲台が敵を追跡するなど「常に特定の方向を向く」処理に使います。",
+        syntax:"transform.LookAt(target.position);        // Transformを渡す\ntransform.LookAt(new Vector3(0, 0, 0));  // 座標を直接渡す",
+        note:"LookAt()は即座に向きを変えます。滑らかに向かせたい場合はQuaternion.Slerpと組み合わせましょう。" },
+      { name:"Rotation * Vector3（クォータニオンとベクトルの乗算）", kind:"class", summary:"回転をベクトルに適用してローカル方向をワールド座標に変換する",
+        desc:"target.rotation * offsetとすると、offsetベクトルをtargetの回転に合わせて変換できます。「プレイヤーの後ろ」という相対的な位置をワールド座標に変換するのに使います。",
+        syntax:"Vector3 worldOffset = target.rotation * localOffset;",
+        note:"Vector3をQuaternionに掛ける（Quaternion * Vector3）の順番は逆にできません。" },
+    ],
+    related: [54, 50, 52]
+  },
+
+  {
+    id: 54,
+    icon: "🖱️",
+    title: "マウスでカメラを回転させたい",
+    desc: "マウスの動きに合わせて視点を上下左右に動かす一人称・三人称カメラ",
+    cats: ["action","input"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["Input.GetAxis MouseX","Cursor.lockState","Mathf.Clamp"],
+    idea: "マウスのデルタ値をX/Y軸の回転に変換します。水平回転はプレイヤー本体を回し、垂直回転はカメラだけを回すのが一般的です。上下の回転角度はClampで制限します。",
+    code: `<span class="cm">// MouseLook.cs（Cameraに付ける。プレイヤーのTransformを渡す）</span>
+<span class="kw">public class</span> <span class="type">MouseLook</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">Transform</span> playerBody;      <span class="cm">// プレイヤー本体</span>
+    <span class="kw">public float</span>    sensitivity = <span class="num">2f</span>;
+    <span class="kw">public float</span>    xClampMin   = <span class="num">-80f</span>; <span class="cm">// 見下ろし限界</span>
+    <span class="kw">public float</span>    xClampMax   = <span class="num"> 80f</span>; <span class="cm">// 見上げ限界</span>
+    <span class="kw">private float</span>   xRotation   = <span class="num">0f</span>;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        <span class="cm">// カーソルを非表示にして画面中央に固定</span>
+        <span class="type">Cursor</span>.lockState = <span class="type">CursorLockMode</span>.Locked;
+    }
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="kw">float</span> mouseX = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Mouse X"</span>) * sensitivity;
+        <span class="kw">float</span> mouseY = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Mouse Y"</span>) * sensitivity;
+
+        <span class="cm">// 上下回転（カメラのみ）</span>
+        xRotation -= mouseY;
+        xRotation  = <span class="type">Mathf</span>.<span class="fn">Clamp</span>(xRotation, xClampMin, xClampMax);
+        transform.localRotation = <span class="type">Quaternion</span>.<span class="fn">Euler</span>(xRotation, <span class="num">0f</span>, <span class="num">0f</span>);
+
+        <span class="cm">// 左右回転（プレイヤー本体ごと回す）</span>
+        playerBody.<span class="fn">Rotate</span>(<span class="type">Vector3</span>.up * mouseX);
+    }
+}`,
+    warn: "Cursor.lockStateをLockedにしたままゲームを終了するとカーソルが戻らなくなります。OnApplicationQuitでCursorLockMode.Noneに戻す処理を入れましょう。",
+    keywords: [
+      { name:"Input.GetAxis(\"Mouse X/Y\")", kind:"method", summary:"マウスの移動量を取得する",
+        desc:"\"Mouse X\"で水平、\"Mouse Y\"で垂直方向のマウスの移動量を返します。フレームごとの差分（デルタ値）なので、感度（sensitivity）を掛けて使います。",
+        syntax:"float mouseX = Input.GetAxis(\"Mouse X\") * sensitivity;",
+        note:"新しいInput SystemではMouse.current.delta.ReadValue()で取得します。" },
+      { name:"Cursor.lockState", kind:"property", summary:"カーソルの表示・固定状態を制御する",
+        desc:"CursorLockMode.Lockedにするとカーソルが非表示になり画面中央に固定されます。FPSやTPSゲームで視点操作中にカーソルが動かないようにするのに必須です。",
+        syntax:"Cursor.lockState = CursorLockMode.Locked;   // 固定・非表示\nCursor.lockState = CursorLockMode.None;    // 通常に戻す",
+        note:"CursorLockMode.Confinedは表示したままウィンドウ内に固定します。" },
+      { name:"Transform.Rotate()", kind:"method", summary:"相対的に回転を加える",
+        desc:"現在の回転に対して追加で回転させます。transform.rotationに加算するイメージです。引数のVector3でX/Y/Z軸の回転角度（度）を指定します。",
+        syntax:"transform.Rotate(Vector3.up * angle); // Y軸回転",
+        note:"ワールド座標基準で回転する場合はtransform.Rotate(axis, angle, Space.World)と指定します。" },
+    ],
+    related: [53, 50, 49]
+  },
+
+  {
+    id: 55,
+    icon: "🌍",
+    title: "3Dで地面判定をしたい",
+    desc: "Raycastを真下に飛ばして接地しているか検知する",
+    cats: ["physics","action"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["Physics.Raycast","RaycastHit","LayerMask"],
+    idea: "足元から真下にRayを飛ばして地面に当たるか確認します。Physics.CheckSphereより判定が細かく、当たった位置や法線も取得できます。傾斜地での接地判定にも使えます。",
+    code: `<span class="cm">// GroundCheck3D.cs</span>
+<span class="kw">public class</span> <span class="type">GroundCheck3D</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span>     rayLength  = <span class="num">1.1f</span>; <span class="cm">// キャラの半身より少し長く</span>
+    <span class="kw">public</span> <span class="type">LayerMask</span> groundMask;
+    <span class="kw">private bool</span>     isGrounded;
+    <span class="kw">private</span> <span class="type">RaycastHit</span> hitInfo;
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="cm">// 中心から真下にRayを飛ばす</span>
+        isGrounded = <span class="type">Physics</span>.<span class="fn">Raycast</span>(
+            transform.position,
+            <span class="type">Vector3</span>.down,
+            <span class="kw">out</span> hitInfo,
+            rayLength,
+            groundMask
+        );
+
+        <span class="kw">if</span> (isGrounded)
+        {
+            <span class="cm">// 地面の法線（傾き）も取得できる</span>
+            <span class="type">Debug</span>.<span class="fn">DrawRay</span>(hitInfo.point, hitInfo.normal, <span class="type">Color</span>.green);
+        }
+    }
+
+    <span class="cm">// Sceneビューにデバッグ描画</span>
+    <span class="kw">void</span> <span class="fn">OnDrawGizmos</span>()
+    {
+        <span class="type">Gizmos</span>.color = isGrounded ? <span class="type">Color</span>.green : <span class="type">Color</span>.red;
+        <span class="type">Gizmos</span>.<span class="fn">DrawLine</span>(
+            transform.position,
+            transform.position + <span class="type">Vector3</span>.down * rayLength);
+    }
+}`,
+    warn: "rayLengthはキャラクターの半身より少し長めに設定します。短すぎると浮いているときでも接地判定になります。キャプセルコライダーのheight/2 + 0.1fが目安です。",
+    keywords: [
+      { name:"Physics.Raycast() with out", kind:"method", summary:"Rayを飛ばして当たった情報を詳しく取得する",
+        desc:"outキーワードでRaycastHit変数を渡すと、当たった位置(point)・法線(normal)・距離(distance)・当たったCollider(collider)などの詳細情報を受け取れます。",
+        syntax:"RaycastHit hit;\nbool grounded = Physics.Raycast(origin, direction, out hit, distance, mask);",
+        note:"outキーワードを使う場合は宣言時に初期化不要ですが、変数の宣言自体は必要です。" },
+      { name:"RaycastHit", kind:"class", summary:"Raycastの結果（当たった情報）を格納する構造体",
+        desc:"当たった点の座標(point)、面の法線(normal)、距離(distance)、当たったCollider、当たったGameObjectなどの情報を持ちます。",
+        syntax:"RaycastHit hit;\nhit.point;    // 当たった座標\nhit.normal;   // 当たった面の法線\nhit.collider; // 当たったCollider",
+        note:"hit.collider.gameObjectで当たったGameObjectにアクセスできます。" },
+      { name:"Debug.DrawRay()", kind:"method", summary:"SceneビューにRayを描画してデバッグする",
+        desc:"指定した始点から方向にラインを描画します。Raycastの当たり判定のデバッグに使います。ゲームビューには表示されません。",
+        syntax:"Debug.DrawRay(start, direction * length, Color.red);",
+        note:"Debug.DrawLine(start, end, color)で2点間のラインも描けます。" },
+    ],
+    related: [51, 56, 49]
+  },
+
+  {
+    id: 56,
+    icon: "⛰️",
+    title: "坂道をすべらずに歩かせたい",
+    desc: "傾斜面でのスリップを防いでキャラを安定して歩かせる設定",
+    cats: ["physics","action"],
+    genres: ["3daction"],
+    diff: 1,
+    components: ["PhysicMaterial","slopeLimit","CharacterController"],
+    idea: "RigidbodyにPhysicMaterialで摩擦を設定する方法と、CharacterControllerのslopeLimitを使う方法があります。CharacterControllerはスロープ処理が組み込みで楽です。",
+    code: `<span class="cm">// CharacterControllerMove.cs（CharacterController版）</span>
+<span class="kw">public class</span> <span class="type">CharacterControllerMove</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> speed     = <span class="num">5f</span>;
+    <span class="kw">public float</span> gravity   = <span class="num">-9.81f</span>;
+    <span class="kw">public float</span> jumpForce = <span class="num">3f</span>;
+
+    <span class="kw">private</span> <span class="type">CharacterController</span> cc;
+    <span class="kw">private</span> <span class="type">Vector3</span> velocity;
+
+    <span class="kw">void</span> <span class="fn">Start</span>() => cc = <span class="fn">GetComponent</span>&lt;<span class="type">CharacterController</span>&gt;();
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="kw">float</span> h = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Horizontal"</span>);
+        <span class="kw">float</span> v = <span class="type">Input</span>.<span class="fn">GetAxis</span>(<span class="str">"Vertical"</span>);
+
+        <span class="type">Vector3</span> move = transform.right * h + transform.forward * v;
+        cc.<span class="fn">Move</span>(move * speed * <span class="type">Time</span>.deltaTime);
+
+        <span class="cm">// 重力を手動で加える</span>
+        <span class="kw">if</span> (cc.isGrounded && velocity.y < <span class="num">0f</span>)
+            velocity.y = <span class="num">-2f</span>; <span class="cm">// 地面に押しつける小さな値</span>
+
+        <span class="kw">if</span> (<span class="type">Input</span>.<span class="fn">GetKeyDown</span>(<span class="type">KeyCode</span>.Space) && cc.isGrounded)
+            velocity.y = jumpForce;
+
+        velocity.y += gravity * <span class="type">Time</span>.deltaTime;
+        cc.<span class="fn">Move</span>(velocity * <span class="type">Time</span>.deltaTime);
+    }
+}`,
+    warn: "CharacterControllerはPhysicsの衝突イベント（OnCollisionEnter等）が発生しません。当たり判定が必要な場合はOnControllerColliderHitを使います。",
+    keywords: [
+      { name:"CharacterController", kind:"class", summary:"物理演算なしでキャラ移動を制御する専用コンポーネント",
+        desc:"Rigidbodyを使わずにキャラクターの移動を制御します。スロープ(slopeLimit)・段差(stepOffset)の処理が組み込まれており、地面判定(isGrounded)も内蔵しています。物理挙動が不要なキャラ移動に向いています。",
+        syntax:"CharacterController cc = GetComponent<CharacterController>();\ncc.Move(moveVector * Time.deltaTime);",
+        note:"cc.isGroundedで接地判定を取得できます。ただし若干不安定なため追加の判定を組み合わせることもあります。" },
+      { name:"CharacterController.Move()", kind:"method", summary:"CharacterControllerを指定ベクトル分移動させる",
+        desc:"引数のVector3分だけキャラを移動します。衝突や段差・スロープを自動で考慮してくれます。毎フレームTime.deltaTimeを掛けたベクトルを渡します。",
+        syntax:"cc.Move(direction * speed * Time.deltaTime);",
+        note:"AddForceやvelocityは使えません。重力は自前でvelocity.yを計算してMove()に渡します。" },
+      { name:"PhysicMaterial", kind:"class", summary:"Colliderの摩擦・反発を設定するマテリアル",
+        desc:"DynamicFriction（動摩擦）・StaticFriction（静摩擦）・Bounciness（反発）を設定します。坂でスリップするのはFrictionが低いためです。Frictionを高く設定したPhysicMaterialをColliderに設定することで対処できます。",
+        syntax:"// Inspectorで作成: Project右クリック→Create→Physic Material",
+        note:"PhysicMaterial（3D）とPhysicsMaterial2D（2D）は別物です。" },
+    ],
+    related: [49, 51, 55]
+  },
+
+  {
+    id: 57,
+    icon: "👆",
+    title: "3DオブジェクトをクリックしたいRaycast",
+    desc: "マウスクリックで3D空間のオブジェクトを選択・操作する",
+    cats: ["input","physics"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["Camera.ScreenPointToRay","Physics.Raycast","RaycastHit"],
+    idea: "カメラからマウスカーソル方向にRayを飛ばし、当たったオブジェクトを取得します。「クリックしたオブジェクトに命令する」「マウスの先にエフェクトを出す」など幅広く使えます。",
+    code: `<span class="cm">// ClickObject.cs（Cameraに付ける）</span>
+<span class="kw">public class</span> <span class="type">ClickObject</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span>     rayDistance = <span class="num">100f</span>;
+    <span class="kw">public</span> <span class="type">LayerMask</span> clickMask;   <span class="cm">// クリック対象のレイヤー</span>
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="kw">if</span> (!<span class="type">Input</span>.<span class="fn">GetMouseButtonDown</span>(<span class="num">0</span>)) <span class="kw">return</span>;
+
+        <span class="cm">// スクリーン座標からRayを生成</span>
+        <span class="type">Ray</span> ray = <span class="type">Camera</span>.main.<span class="fn">ScreenPointToRay</span>(<span class="type">Input</span>.mousePosition);
+        <span class="type">RaycastHit</span> hit;
+
+        <span class="kw">if</span> (<span class="type">Physics</span>.<span class="fn">Raycast</span>(ray, <span class="kw">out</span> hit, rayDistance, clickMask))
+        {
+            <span class="type">Debug</span>.<span class="fn">Log</span>(<span class="str">"クリック: "</span> + hit.collider.gameObject.name);
+
+            <span class="cm">// クリックされたオブジェクトの処理を呼ぶ</span>
+            <span class="type">IClickable</span> clickable = hit.collider.<span class="fn">GetComponent</span>&lt;<span class="type">IClickable</span>&gt;();
+            clickable?.<span class="fn">OnClick</span>(hit.point);
+        }
+    }
+}
+
+<span class="cm">// クリック可能なオブジェクトに付けるインターフェース</span>
+<span class="kw">public interface</span> <span class="type">IClickable</span>
+{
+    <span class="kw">void</span> <span class="fn">OnClick</span>(<span class="type">Vector3</span> hitPoint);
+}`,
+    warn: "UIのButtonとRaycastが重なるとゲームオブジェクトにもクリックが貫通することがあります。EventSystem.current.IsPointerOverGameObject()でUI上かチェックしてからRaycastすると安全です。",
+    keywords: [
+      { name:"Camera.ScreenPointToRay()", kind:"method", summary:"スクリーン座標からワールド空間へのRayを生成する",
+        desc:"スクリーン上のピクセル座標（マウス位置など）からカメラを通してワールド空間へ飛ぶRayを生成します。3Dオブジェクトのクリック判定に必須のメソッドです。",
+        syntax:"Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);",
+        note:"Input.mousePositionはスクリーン左下が(0,0)、右上が(Screen.width, Screen.height)です。" },
+      { name:"interface（インターフェース）", kind:"class", summary:"メソッドの型だけ定義して実装を強制する仕組み",
+        desc:"IClickableのように「OnClick()を持つ」という契約だけ定義します。実装クラスはOnClick()の中身を自由に決められます。GetComponent<IClickable>()でインターフェースを実装したコンポーネントを取得でき、オブジェクトの種類に関わらず統一的に扱えます。",
+        syntax:"public interface IClickable { void OnClick(Vector3 point); }\npublic class Enemy : MonoBehaviour, IClickable { public void OnClick(Vector3 p) { } }",
+        note:"インターフェースはMonoBehaviourを継承できません。クラスに実装させて使います。" },
+      { name:"Input.GetMouseButtonDown()", kind:"method", summary:"マウスボタンが押された瞬間を検知する",
+        desc:"引数0が左クリック、1が右クリック、2が中クリックです。GetMouseButton()は押し続けている間、GetMouseButtonDown()は押した瞬間のみtrueを返します。",
+        syntax:"if (Input.GetMouseButtonDown(0)) { // 左クリック }",
+        note:"新しいInput SystemではMouse.current.leftButton.wasPressedThisFrameで取得します。" },
+    ],
+    related: [54, 55, 50]
+  },
+
+  {
+    id: 58,
+    icon: "🗺️",
+    title: "NavMeshで敵をナビゲーションさせたい",
+    desc: "NavMeshを焼き付けてNavMeshAgentで障害物を避けて移動させる基本設定",
+    cats: ["enemy","action"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["NavMeshAgent","NavMesh","SetDestination"],
+    idea: "まずシーンのメッシュをNavMeshとしてベイクします。その後NavMeshAgentコンポーネントをつけてSetDestination()で目標を指定するだけで自動でパスを見つけて移動します。",
+    code: `<span class="cm">// NavMeshEnemy.cs</span>
+<span class="kw">using</span> UnityEngine.AI;
+
+<span class="kw">public class</span> <span class="type">NavMeshEnemy</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">Transform</span> player;
+    <span class="kw">public float</span>    updateInterval = <span class="num">0.5f</span>; <span class="cm">// パス再計算の間隔</span>
+
+    <span class="kw">private</span> <span class="type">NavMeshAgent</span> agent;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        agent = <span class="fn">GetComponent</span>&lt;<span class="type">NavMeshAgent</span>&gt;();
+        <span class="cm">// 一定間隔で目的地を更新（毎フレームは重い）</span>
+        <span class="fn">InvokeRepeating</span>(<span class="str">"UpdateDestination"</span>, <span class="num">0f</span>, updateInterval);
+    }
+
+    <span class="kw">void</span> <span class="fn">UpdateDestination</span>()
+    {
+        <span class="kw">if</span> (player != <span class="kw">null</span>)
+            agent.<span class="fn">SetDestination</span>(player.position);
+    }
+
+    <span class="cm">// 目的地まであとどれくらいか確認</span>
+    <span class="kw">bool</span> <span class="fn">HasArrived</span>()
+    {
+        <span class="kw">return</span> !agent.pathPending
+            && agent.remainingDistance <= agent.stoppingDistance;
+    }
+}`,
+    warn: "NavMeshはWindow > AI > Navigationでベイクします。動く障害物（扉など）には通常のNavMeshは対応しません。NavMeshObstacleコンポーネントを使いましょう。",
+    keywords: [
+      { name:"NavMeshAgent", kind:"class", summary:"NavMesh上を自動でパスを見つけて移動するコンポーネント",
+        desc:"SetDestination()で目的地を指定するだけで、障害物を避けながら自動でルートを探索・移動します。speed・angularSpeed・stoppingDistanceなどの移動パラメータをInspectorで設定できます。",
+        syntax:"agent.SetDestination(targetPosition);",
+        note:"using UnityEngine.AI;が必要です。" },
+      { name:"NavMeshAgent.SetDestination()", kind:"method", summary:"NavMeshAgentの目標地点を設定する",
+        desc:"引数のVector3座標をNavMesh上の最近傍点に向かって自動でパスを計算・移動します。毎フレーム呼ぶと計算が重いため、InvokeRepeatingやコルーチンで間隔を空けるのがポイントです。",
+        syntax:"agent.SetDestination(player.position);",
+        note:"agent.isStopped = trueで移動を一時停止、falseで再開できます。" },
+      { name:"NavMeshのベイク", kind:"class", summary:"シーンの歩行可能エリアを事前計算して保存する",
+        desc:"Window > AI > Navigationを開き、静的なオブジェクトをNavigation Static（InspectorのStaticフラグ）に設定して「Bake」ボタンを押します。これで青く表示された歩行可能エリア（NavMesh）が生成されます。",
+        syntax:"// コードではなくエディタ操作: Window > AI > Navigation > Bake",
+        note:"ランタイムで動的にNavMeshを変更するにはNavMeshSurfaceコンポーネント（AI Navigationパッケージ）を使います。" },
+    ],
+    related: [59, 7, 41]
+  },
+
+  {
+    id: 59,
+    icon: "🔍",
+    title: "NavMeshで障害物を避けて追いかけさせたい",
+    desc: "視野角判定と組み合わせてプレイヤーを発見したら追跡するAI",
+    cats: ["enemy","action"],
+    genres: ["3daction"],
+    diff: 3,
+    components: ["NavMeshAgent","enum","Vector3.Distance"],
+    idea: "Patrol（巡回）とChase（追跡）の状態をenumで管理します。視野に入ったらChaseに切り替えてSetDestinationでプレイヤーを追い、見失ったらPatrolに戻します。",
+    code: `<span class="cm">// NavMeshAI.cs</span>
+<span class="kw">using</span> UnityEngine.AI;
+
+<span class="kw">public class</span> <span class="type">NavMeshAI</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public enum</span> <span class="type">State</span> { Patrol, Chase }
+    <span class="kw">public</span> <span class="type">State</span> state = <span class="type">State</span>.Patrol;
+
+    <span class="kw">public</span> <span class="type">Transform</span>   player;
+    <span class="kw">public</span> <span class="type">Transform</span>[] waypoints;    <span class="cm">// 巡回ポイント</span>
+    <span class="kw">public float</span>      sightRange  = <span class="num">8f</span>;
+    <span class="kw">public float</span>      loseRange   = <span class="num">12f</span>; <span class="cm">// 見失う距離</span>
+
+    <span class="kw">private</span> <span class="type">NavMeshAgent</span> agent;
+    <span class="kw">private int</span>          waypointIdx = <span class="num">0</span>;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        agent = <span class="fn">GetComponent</span>&lt;<span class="type">NavMeshAgent</span>&gt;();
+        <span class="fn">GoToNextWaypoint</span>();
+    }
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="kw">float</span> dist = <span class="type">Vector3</span>.<span class="fn">Distance</span>(transform.position, player.position);
+
+        <span class="kw">switch</span> (state)
+        {
+            <span class="kw">case</span> <span class="type">State</span>.Patrol:
+                <span class="cm">// 巡回中：ウェイポイントを順番に移動</span>
+                <span class="kw">if</span> (!agent.pathPending && agent.remainingDistance < <span class="num">0.5f</span>)
+                    <span class="fn">GoToNextWaypoint</span>();
+
+                <span class="kw">if</span> (dist < sightRange) state = <span class="type">State</span>.Chase;
+                <span class="kw">break</span>;
+
+            <span class="kw">case</span> <span class="type">State</span>.Chase:
+                <span class="cm">// 追跡中：プレイヤーへ向かう</span>
+                agent.<span class="fn">SetDestination</span>(player.position);
+
+                <span class="kw">if</span> (dist > loseRange) state = <span class="type">State</span>.Patrol;
+                <span class="kw">break</span>;
+        }
+    }
+
+    <span class="kw">void</span> <span class="fn">GoToNextWaypoint</span>()
+    {
+        <span class="kw">if</span> (waypoints.Length == <span class="num">0</span>) <span class="kw">return</span>;
+        agent.<span class="fn">SetDestination</span>(waypoints[waypointIdx].position);
+        waypointIdx = (waypointIdx + <span class="num">1</span>) % waypoints.Length;
+    }
+}`,
+    warn: "waypointsが空のまま実行するとGoToNextWaypoint()でエラーになります。Inspectorで必ず巡回ポイントをセットするか、コードでnullチェックを入れましょう。",
+    keywords: [
+      { name:"NavMeshAgent.remainingDistance", kind:"property", summary:"目的地までの残り距離を返す",
+        desc:"現在のパス上の残り距離を返します。stoppingDistanceと比較して「目的地に着いたか」を判定するのに使います。pathPendingがtrueの間はパス計算中なので値が正確でない場合があります。",
+        syntax:"if (!agent.pathPending && agent.remainingDistance < 0.5f) { // 到着 }",
+        note:"remainingDistanceはNavMesh上の経路距離なので、直線距離のVector3.Distanceとは値が異なります。" },
+      { name:"% 演算子（剰余）", kind:"class", summary:"割り算の余りを返す。配列のループに便利",
+        desc:"waypointIdx % waypoints.Lengthとすることで、インデックスが配列の長さを超えると自動で0に戻ります。配列を無限にループさせるときの定番テクニックです。",
+        syntax:"waypointIdx = (waypointIdx + 1) % waypoints.Length; // 0→1→2→0→…",
+        note:"C#の%演算子は負の数でも余りを返します（例：-1 % 3 = -1）。インデックスが負にならないよう注意してください。" },
+    ],
+    related: [58, 41, 39]
+  },
+
+  {
+    id: 60,
+    icon: "🪃",
+    title: "オブジェクトをつかんで投げたい",
+    desc: "プレイヤーがオブジェクトに近づいてEキーでつかみ、クリックで投げる",
+    cats: ["physics","action"],
+    genres: ["3daction"],
+    diff: 3,
+    components: ["Rigidbody","SetParent","AddForce","isKinematic"],
+    idea: "つかんでいる間はRigidbodyをisKinematic=trueにしてプレイヤーの子オブジェクトにします。投げるときはisKinematic=falseに戻してカメラの前方方向にAddForceします。",
+    code: `<span class="cm">// Pickup.cs（プレイヤーに付ける）</span>
+<span class="kw">public class</span> <span class="type">Pickup</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public</span> <span class="type">Transform</span> holdPoint;      <span class="cm">// 持つ位置（カメラ前方の空オブジェクト）</span>
+    <span class="kw">public float</span>    pickupRange = <span class="num">2f</span>;
+    <span class="kw">public float</span>    throwForce  = <span class="num">10f</span>;
+    <span class="kw">public</span> <span class="type">LayerMask</span> pickupMask;
+
+    <span class="kw">private</span> <span class="type">Rigidbody</span> heldObj = <span class="kw">null</span>;
+
+    <span class="kw">void</span> <span class="fn">Update</span>()
+    {
+        <span class="cm">// Eキーでつかむ / 離す</span>
+        <span class="kw">if</span> (<span class="type">Input</span>.<span class="fn">GetKeyDown</span>(<span class="type">KeyCode</span>.E))
+        {
+            <span class="kw">if</span> (heldObj == <span class="kw">null</span>) <span class="fn">TryPickup</span>();
+            <span class="kw">else</span>                  <span class="fn">Drop</span>();
+        }
+
+        <span class="cm">// 左クリックで投げる</span>
+        <span class="kw">if</span> (<span class="type">Input</span>.<span class="fn">GetMouseButtonDown</span>(<span class="num">0</span>) && heldObj != <span class="kw">null</span>)
+            <span class="fn">Throw</span>();
+    }
+
+    <span class="kw">void</span> <span class="fn">TryPickup</span>()
+    {
+        <span class="type">Collider</span>[] hits = <span class="type">Physics</span>.<span class="fn">OverlapSphere</span>(
+            transform.position, pickupRange, pickupMask);
+
+        <span class="kw">if</span> (hits.Length == <span class="num">0</span>) <span class="kw">return</span>;
+
+        <span class="type">Rigidbody</span> rb = hits[<span class="num">0</span>].<span class="fn">GetComponent</span>&lt;<span class="type">Rigidbody</span>&gt;();
+        <span class="kw">if</span> (rb == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        heldObj = rb;
+        heldObj.isKinematic = <span class="kw">true</span>;            <span class="cm">// 物理を無効化</span>
+        heldObj.transform.<span class="fn">SetParent</span>(holdPoint); <span class="cm">// 手の子に</span>
+        heldObj.transform.localPosition = <span class="type">Vector3</span>.zero;
+    }
+
+    <span class="kw">void</span> <span class="fn">Drop</span>()
+    {
+        heldObj.transform.<span class="fn">SetParent</span>(<span class="kw">null</span>);
+        heldObj.isKinematic = <span class="kw">false</span>;
+        heldObj = <span class="kw">null</span>;
+    }
+
+    <span class="kw">void</span> <span class="fn">Throw</span>()
+    {
+        heldObj.transform.<span class="fn">SetParent</span>(<span class="kw">null</span>);
+        heldObj.isKinematic = <span class="kw">false</span>;
+        heldObj.<span class="fn">AddForce</span>(<span class="type">Camera</span>.main.transform.forward * throwForce,
+                          <span class="type">ForceMode</span>.Impulse);
+        heldObj = <span class="kw">null</span>;
+    }
+}`,
+    warn: "isKinematic=trueのオブジェクトは物理演算を受けませんが、他のRigidbodyへの衝突は与えられます。持っている間に壁を貫通しないようholdPointの位置とpickupRangeを調整しましょう。",
+    keywords: [
+      { name:"Rigidbody.isKinematic", kind:"property", summary:"物理演算の影響を受けるかどうかを切り替える",
+        desc:"trueにすると重力・衝突による力を受けなくなります（コードによる移動は可能）。falseで通常の物理演算に戻ります。オブジェクトを「手でつかむ」演出に使います。",
+        syntax:"rb.isKinematic = true;  // 物理オフ（手で持つ）\nrb.isKinematic = false; // 物理オン（投げる）",
+        note:"isKinematic=trueのままAddForce()を呼んでも効果がありません。投げる前にfalseに戻しましょう。" },
+      { name:"Physics.OverlapSphere()", kind:"method", summary:"3D空間の球形範囲内のColliderを全て返す",
+        desc:"2DのOverlapCircleAll()の3D版です。Collider[]を返します。近くのオブジェクトを一括取得したいときに使います。",
+        syntax:"Collider[] hits = Physics.OverlapSphere(center, radius, layerMask);",
+        note:"OverlapSphereNonAlloc()を使うと配列を事前に用意してGCアロケーションを抑えられます。" },
+    ],
+    related: [57, 51, 49]
+  },
+
+  {
+    id: 61,
+    icon: "🚪",
+    title: "ドアをヒンジで開けたい",
+    desc: "HingeJointを使ってドアが物理的にスイングして開く",
+    cats: ["physics","action"],
+    genres: ["3daction"],
+    diff: 2,
+    components: ["HingeJoint","JointMotor","JointLimits"],
+    idea: "HingeJointをドアに付けてモーターで回転させます。スイングの上限・下限をJointLimitsで設定します。プレイヤーが触れたときにモーターをオンにするだけで開閉できます。",
+    code: `<span class="cm">// Door3D.cs（ドアオブジェクトに付ける）</span>
+<span class="kw">public class</span> <span class="type">Door3D</span> : <span class="type">MonoBehaviour</span>
+{
+    <span class="kw">public float</span> openAngle  = <span class="num">90f</span>; <span class="cm">// 開く角度</span>
+    <span class="kw">public float</span> motorSpeed = <span class="num">60f</span>; <span class="cm">// 開く速度（度/秒）</span>
+    <span class="kw">private</span> <span class="type">HingeJoint</span> hinge;
+    <span class="kw">private bool</span>       isOpen = <span class="kw">false</span>;
+
+    <span class="kw">void</span> <span class="fn">Start</span>()
+    {
+        hinge = <span class="fn">GetComponent</span>&lt;<span class="type">HingeJoint</span>&gt;();
+
+        <span class="cm">// 回転範囲の上下限を設定</span>
+        <span class="type">JointLimits</span> limits = hinge.limits;
+        limits.min = <span class="num">0f</span>;
+        limits.max = openAngle;
+        hinge.limits     = limits;
+        hinge.useLimits  = <span class="kw">true</span>;
+    }
+
+    <span class="kw">void</span> <span class="fn">OnTriggerEnter</span>(<span class="type">Collider</span> other)
+    {
+        <span class="kw">if</span> (other.<span class="fn">CompareTag</span>(<span class="str">"Player"</span>)) <span class="fn">OpenDoor</span>();
+    }
+
+    <span class="kw">void</span> <span class="fn">OpenDoor</span>()
+    {
+        <span class="kw">if</span> (isOpen) <span class="kw">return</span>;
+        isOpen = <span class="kw">true</span>;
+
+        <span class="cm">// モーターを使って自動で開く</span>
+        <span class="type">JointMotor</span> motor = hinge.motor;
+        motor.targetVelocity = motorSpeed;
+        motor.force          = <span class="num">50f</span>;
+        hinge.motor    = motor;
+        hinge.useMotor = <span class="kw">true</span>;
+    }
+}`,
+    warn: "HingeJointのAnchor（回転軸の支点）の位置がドアの中心だと、ドアが中心を軸に回転します。ドアのヒンジ側（端）にAnchorを設定してください。",
+    keywords: [
+      { name:"HingeJoint", kind:"class", summary:"2つのオブジェクトを1軸のヒンジで接続する物理コンポーネント",
+        desc:"ドア・蓋・関節など「1軸を中心に回転する」物理挙動を実現します。Anchor（支点）・Axis（回転軸）・Limits（回転範囲）・Motor（自動回転）・Spring（バネ）を設定できます。",
+        syntax:"HingeJoint hinge = GetComponent<HingeJoint>();\nhinge.useMotor = true;",
+        note:"HingeJointはConnected Bodyに接続先を指定できます。指定しなければワールド空間に固定されます。" },
+      { name:"JointMotor", kind:"class", summary:"Jointを自動で回転させるモーター設定",
+        desc:"targetVelocity（目標回転速度）とforce（最大トルク）を設定してhinge.motorに代入し、useMotor=trueにすることでモーター動作が始まります。",
+        syntax:"JointMotor motor = hinge.motor;\nmotor.targetVelocity = 60f;\nmotor.force = 50f;\nhinge.motor = motor;\nhinge.useMotor = true;",
+        note:"JointMotorはstructなのでhinge.motorをローカル変数に取り出して変更し代入し直す必要があります（直接変更不可）。" },
+      { name:"OnTriggerEnter()", kind:"event", summary:"3DのTriggerに入った瞬間に呼ばれる（引数はCollider）",
+        desc:"2DのOnTriggerEnter2Dの3D版です。引数がCollider2DではなくColliderになります。Is TriggerがONのColliderに他のColliderが入った瞬間に呼ばれます。",
+        syntax:"void OnTriggerEnter(Collider other) { }",
+        note:"3DのコライダーイベントはすべてCollider型を引数に取ります（2Dと区別してください）。" },
+    ],
+    related: [5, 29, 60]
   }
 ];
 
@@ -2703,5 +3474,6 @@ const GENRE_TAGS = {
   "2daction":  { label:"2Dアクション", ids:[1,2,3,4,5,6,7,8,9,10,14,15,16,17,18,19,20,21,26,28,29,31,32,33,34,35,36,37,38,39,40,41,42,43,44,47,48] },
   "shooting":  { label:"シューティング", ids:[1,9,10,11,13,22,23,24,25,26,32,33,34,36,37,38,41,42,43,44,46,47,48] },
   "puzzle":    { label:"パズル", ids:[5,10,13,27,28,29,30,31,33,34,35,37,43,44,48] },
-  "runner":    { label:"ランゲーム", ids:[2,10,11,12,13,20,22,32,33,34,37,43,44,45,46,48] }
+  "runner":    { label:"ランゲーム", ids:[2,10,11,12,13,20,22,32,33,34,37,43,44,45,46,48] },
+  "3daction":  { label:"3Dアクション", ids:[49,50,51,52,53,54,55,56,57,58,59,60,61] }
 };
